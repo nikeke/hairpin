@@ -1,0 +1,42 @@
+# Sieve of Eratosthenes in Hairpin
+# Finds all primes up to N using trial division
+# (No arrays, so we use trial division instead of a true sieve)
+
+# is-prime: [N -- BOOL]
+(
+    dup 2 < (drop false) (
+    dup 2 == (drop true) (
+    dup 2 % 0 == (drop false) (
+        # test odd divisors from 3 up to sqrt(n)
+        dup 'd' set
+        3 'divisor' set
+        (self
+         divisor dup * d <= (
+            d divisor % 0 ==
+                (false 'result' set)
+                (divisor 2 + 'divisor' set true 'result' set) if-else
+            result (exec) (drop) if-else
+         ) (drop true 'result' set) if-else)
+        exec drop
+        result
+    ) if-else
+    ) if-else
+    ) if-else
+) 'is-prime' def
+
+# Main loop: check every number from 2 to N
+10000 'limit' set
+0 'count' set
+2 'n' set
+(self
+ n limit <=
+    (n is-prime
+        (count 1 + 'count' set) if
+     n 1 + 'n' set
+     exec) if)
+exec drop
+
+'Primes up to ' print
+limit print '\n' print
+'Count: ' print
+count print '\n' print

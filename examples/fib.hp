@@ -1,0 +1,18 @@
+# Compute Fibonacci numbers up to F(10000)
+# Exercises arbitrary-length integer arithmetic with very large numbers
+# Only prints every 1000th value to avoid I/O overhead
+
+0 'a' set
+1 'b' set
+1 'i' set
+
+(self
+ i 10000 <=
+    (i 1000 % 0 ==
+        ('F(' print i print ') = ' print a print '\n' print) if
+     b 'temp' set
+     a b + 'b' set
+     temp 'a' set
+     i 1 + 'i' set
+     exec) if)
+exec drop

@@ -1,0 +1,328 @@
+# Hairpin self-interpreter
+# Interprets a subset of Hairpin written in Hairpin itself.
+
+# ---- Character helpers ----
+
+(dup '0' >= swap '9' <= ==) 'is-digit' def
+(' ' ==) 'is-space' def
+
+# is-wordchar: true if not a delimiter
+('wc' set
+ wc ' '  ==
+   (false)
+   (wc '\t' == (false) (wc '\n' == (false) (wc '(' == (false)
+    (wc ')' == (false) (wc '\'' == (false) (wc '#' == (false)
+     (true) if-else) if-else) if-else) if-else) if-else) if-else) if-else
+) 'is-wordchar' def
+
+# ---- List helpers ----
+
+# nil lst reverse -> reversed
+(dup
+   (dup head 'rh' set tail swap rh swap cons swap reverse)
+   (drop) if-else
+) 'reverse' def
+
+# ---- Tokenizer ----
+
+(dup (dup head is-space (tail skip-spaces) () if-else) () if-else
+) 'skip-spaces' def
+
+(dup (dup head '\n' == (tail) (tail skip-comment) if-else) () if-else
+) 'skip-comment' def
+
+# read-digits: charlist acc -- charlist numstring
+('racc' set 'rchars' set
+ rchars
+   (rchars head 'rc' set
+    rc is-digit
+      (rchars tail racc rc + read-digits)
+      (rchars racc) if-else)
+   (rchars racc) if-else
+) 'read-digits' def
+
+# read-word: charlist acc -- charlist wordstring
+('wacc' set 'wchars' set
+ wchars
+   (wchars head 'rc' set
+    rc is-wordchar (true) (rc '-' ==) if-else
+      (wchars tail wacc rc + read-word)
+      (wchars wacc) if-else)
+   (wchars wacc) if-else
+) 'read-word' def
+
+# read-string-body: charlist acc -- charlist string
+('sacc' set 'schars' set
+ schars
+   (schars head 'rc' set schars tail 'schars' set
+    rc '\'' ==
+      (schars sacc)
+      (rc '\\' ==
+        (schars head 'ec' set schars tail 'schars' set
+         ec 'n' == ('\n') (ec 't' == ('\t') (ec) if-else) if-else
+         'esc' set
+         schars sacc esc + read-string-body)
+        (schars sacc rc + read-string-body) if-else
+      ) if-else)
+   (schars sacc) if-else
+) 'read-string-body' def
+
+# classify-word: wordstring -- token
+(dup 'true' ==
+   (drop 'boolean' true cons)
+   (dup 'false' ==
+     (drop 'boolean' false cons)
+     (dup 'nil' ==
+       (drop 'nil' nil cons)
+       ('word' swap cons) if-else
+     ) if-else
+   ) if-else
+) 'classify-word' def
+
+# tokenize-loop: charlist acc -- tokenlist
+('tacc' set skip-spaces 'src' set
+ src
+   (src head 'ch' set
+    ch '#' ==
+      (src skip-comment 'src' set src tacc tokenize-loop)
+      (ch '(' ==
+        (src tail 'src' set 'lparen' nil cons tacc cons src swap tokenize-loop)
+        (ch ')' ==
+          (src tail 'src' set 'rparen' nil cons tacc cons src swap tokenize-loop)
+          (ch '\'' ==
+            (src tail '' read-string-body 'sv' set 'src' set
+             'string' sv cons tacc cons src swap tokenize-loop)
+            (ch is-digit
+              (src '' read-digits 'nv' set 'src' set
+               'integer' nv cons tacc cons src swap tokenize-loop)
+              (ch '-' ==
+                (src tail 'after-dash' set
+                 after-dash
+                   (after-dash head is-digit
+                     (after-dash '-' read-digits 'nv' set 'src' set
+                      'integer' nv cons tacc cons src swap tokenize-loop)
+                     (src '' read-word 'wv' set 'src' set
+                      wv classify-word tacc cons src swap tokenize-loop) if-else)
+                   (src '' read-word 'wv' set 'src' set
+                    wv classify-word tacc cons src swap tokenize-loop) if-else)
+                (src '' read-word 'wv' set 'src' set
+                 wv classify-word tacc cons src swap tokenize-loop) if-else
+              ) if-else
+            ) if-else
+          ) if-else
+        ) if-else
+      ) if-else
+   ) (nil tacc reverse) if-else
+) 'tokenize-loop' def
+
+(chars nil tokenize-loop) 'tokenize' def
+
+# ---- Parser ----
+
+nil 'pacc-stack' set
+nil 'pacc' set
+
+# parse-literal: token -- instruction
+(dup head 'plt' set tail 'plv' set
+ plt 'integer' == ('push' plv integer cons)
+   (plt 'nil' == ('push' nil cons)
+     ('push' plv cons) if-else
+   ) if-else
+) 'parse-literal' def
+
+# parse-code: tokenlist -- remaining program
+# Saves pacc on pacc-stack for nested calls
+(pacc pacc-stack cons 'pacc-stack' set
+ nil 'pacc' set
+ (dup
+    (dup head 'tok' set tail
+     tok head 'ttype' set
+     ttype 'rparen' ==
+       (nil pacc reverse
+        pacc-stack head 'pacc' set
+        pacc-stack tail 'pacc-stack' set)
+       (ttype 'lparen' ==
+         (parse-code 'sub' set 'rest' set
+          'code' sub cons pacc cons 'pacc' set rest parse-code-loop)
+         (ttype 'word' ==
+           ('word' tok tail cons pacc cons 'pacc' set parse-code-loop)
+           (tok parse-literal pacc cons 'pacc' set parse-code-loop
+           ) if-else
+         ) if-else
+       ) if-else
+    ) () if-else
+ ) 'parse-code-loop' def
+ parse-code-loop
+) 'parse-code' def
+
+# parse-top: tokenlist -- program
+(nil 'ptacc' set
+ (dup
+    (dup head 'tok' set tail
+     tok head 'ttype' set
+     ttype 'lparen' ==
+       (parse-code 'sub' set 'rest' set
+        'code' sub cons ptacc cons 'ptacc' set rest parse-top-loop)
+       (ttype 'word' ==
+         ('word' tok tail cons ptacc cons 'ptacc' set parse-top-loop)
+         (tok parse-literal ptacc cons 'ptacc' set parse-top-loop
+         ) if-else
+       ) if-else
+    ) (drop nil ptacc reverse) if-else
+ ) 'parse-top-loop' def
+ parse-top-loop
+) 'parse-top' def
+
+(tokenize parse-top) 'parse' def
+
+# ---- Evaluator ----
+# Uses globals: stk (meta-stack), env (meta-env)
+
+(stk cons 'stk' set) 'meta-push' def
+(stk head stk tail 'stk' set) 'meta-pop' def
+
+# env-set: name kind value --
+('ev' set 'ek' set 'en' set
+ en ek ev cons cons env cons 'env' set
+) 'env-set' def
+
+# env-lookup: name env -- (kind . value) | nil
+(dup
+   (dup head 'ae' set tail
+    ae head 'ak' set
+    swap dup ak ==
+      (drop drop ae tail)
+      (swap env-lookup) if-else)
+   (drop drop nil) if-else
+) 'env-lookup' def
+
+# eval-word: name --
+('wname' set
+ wname 'dup' ==
+   (meta-pop dup meta-push meta-push)
+   (wname 'drop' ==
+     (meta-pop drop)
+     (wname 'swap' ==
+       (meta-pop 'sa' set meta-pop 'sb' set sa meta-push sb meta-push)
+       (wname '+' ==
+         (meta-pop 'b2' set meta-pop b2 + meta-push)
+         (wname '-' ==
+           (meta-pop 'b2' set meta-pop b2 - meta-push)
+           (wname '*' ==
+             (meta-pop 'b2' set meta-pop b2 * meta-push)
+             (wname '/' ==
+               (meta-pop 'b2' set meta-pop b2 / meta-push)
+               (wname '%' ==
+                 (meta-pop 'b2' set meta-pop b2 % meta-push)
+                 (wname '==' ==
+                   (meta-pop 'b2' set meta-pop b2 == meta-push)
+                   (wname '!=' ==
+                     (meta-pop 'b2' set meta-pop b2 != meta-push)
+                     (wname '<' ==
+                       (meta-pop 'b2' set meta-pop b2 < meta-push)
+                       (wname '<=' ==
+                         (meta-pop 'b2' set meta-pop b2 <= meta-push)
+                         (wname '>' ==
+                           (meta-pop 'b2' set meta-pop b2 > meta-push)
+                           (wname '>=' ==
+                             (meta-pop 'b2' set meta-pop b2 >= meta-push)
+                             (wname 'not' ==
+                               (meta-pop not meta-push)
+                               (wname 'integer' ==
+                                 (meta-pop integer meta-push)
+                                 (wname 'cons' ==
+                                   (meta-pop 'ct' set meta-pop ct cons meta-push)
+                                   (wname 'head' ==
+                                     (meta-pop head meta-push)
+                                     (wname 'tail' ==
+                                       (meta-pop tail meta-push)
+                                       (wname 'chars' ==
+                                         (meta-pop chars meta-push)
+                                         (wname 'string' ==
+                                           (meta-pop string meta-push)
+                                           (wname 'type' ==
+                                             (meta-pop type meta-push)
+                                             (wname 'print' ==
+                                               (meta-pop print)
+                                               (wname 'set' ==
+                                                 (meta-pop 'sn' set meta-pop 'sv' set
+                                                  sn 'value' sv env-set)
+                                                 (wname 'get' ==
+                                                   (meta-pop env env-lookup tail meta-push)
+                                                   (wname 'def' ==
+                                                     (meta-pop 'dn' set meta-pop 'dv' set
+                                                      dn 'code' dv env-set)
+                                                     (wname 'exec' ==
+                                                       (meta-pop eval-prog)
+                                                       (wname 'if' ==
+                                                         (meta-pop 'ic' set meta-pop
+                                                          (ic eval-prog) () if-else)
+                                                         (wname 'if-else' ==
+                                                           (meta-pop 'iec' set meta-pop 'iet' set meta-pop
+                                                            (iet eval-prog) (iec eval-prog) if-else)
+                                                           (wname 'self' ==
+                                                             (current-prog meta-push)
+                                                             (wname env env-lookup 'lu' set
+                                                              lu
+                                                                (lu head 'value' ==
+                                                                  (lu tail meta-push)
+                                                                  (lu tail eval-prog) if-else)
+                                                                ('Undefined: ' wname + print) if-else
+                                                             ) if-else
+                                                           ) if-else
+                                                         ) if-else
+                                                       ) if-else
+                                                     ) if-else
+                                                   ) if-else
+                                                 ) if-else
+                                               ) if-else
+                                             ) if-else
+                                           ) if-else
+                                         ) if-else
+                                       ) if-else
+                                     ) if-else
+                                   ) if-else
+                                 ) if-else
+                               ) if-else
+                             ) if-else
+                           ) if-else
+                         ) if-else
+                       ) if-else
+                     ) if-else
+                   ) if-else
+                 ) if-else
+               ) if-else
+             ) if-else
+           ) if-else
+         ) if-else
+       ) if-else
+     ) if-else
+   ) if-else
+) 'eval-word' def
+
+# eval-instr: instr --
+(dup head 'itype' set tail 'ival' set
+ itype 'push' ==
+   (ival meta-push)
+   (itype 'code' ==
+     (ival meta-push)
+     (ival eval-word) if-else
+   ) if-else
+) 'eval-instr' def
+
+# eval-prog: program --
+(dup 'current-prog' set
+ dup
+   (dup head eval-instr tail eval-prog)
+   (drop) if-else
+) 'eval-prog' def
+
+# run-hairpin: source-string --
+(parse 'prog' set
+ nil 'stk' set
+ nil 'env' set
+ prog eval-prog
+) 'run-hairpin' def
+
+# ---- Test ----
+'(dup *) \'square\' def 7 square print' run-hairpin
