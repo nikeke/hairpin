@@ -141,7 +141,7 @@ python -m hairpin examples/primes.hp
 A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evaluator in ~330 lines. It supports arithmetic, comparisons, strings, booleans, `set`/`get`, `def`, `exec`, `if`, `if-else`, `self`, `cons`/`head`/`tail`, and user-defined words:
 
 ```
-python -m hairpin examples/selfinterp.hp    # prints 49 (7 squared)
+python -m hairpin examples/selfinterp.hp    # prints 49, then the first 100 Fibonacci numbers
 ```
 
 ## REPL

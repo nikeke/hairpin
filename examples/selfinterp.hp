@@ -324,5 +324,9 @@ nil 'pacc' set
  prog eval-prog
 ) 'run-hairpin' def
 
-# ---- Test ----
+# ---- Test: square ----
 '(dup *) \'square\' def 7 square print' run-hairpin
+
+# ---- Test: Fibonacci (first 100) ----
+'\n' print
+'0 \'a\' set 1 \'b\' set 1 \'i\' set (self i 100 <= (a print \'\\n\' print b \'temp\' set a b + \'b\' set temp \'a\' set i 1 + \'i\' set exec) if) exec drop' run-hairpin

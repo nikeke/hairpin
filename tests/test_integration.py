@@ -215,3 +215,15 @@ class TestSelfInterpreter:
     def test_nested_code_in_exec(self, capsys):
         out = _run_in_selfinterp('(true (42 print) if) exec', capsys)
         assert out == '42'
+
+    def test_fibonacci(self, capsys):
+        """Compute first 10 Fibonacci numbers via the self-interpreter."""
+        prog = (
+            "0 'a' set 1 'b' set 1 'i' set "
+            "(self i 10 <= "
+            "  (a print '\\n' print "
+            "   b 'temp' set a b + 'b' set temp 'a' set "
+            "   i 1 + 'i' set exec) if) exec drop"
+        )
+        out = _run_in_selfinterp(prog, capsys)
+        assert out == '0\n1\n1\n2\n3\n5\n8\n13\n21\n34\n'
