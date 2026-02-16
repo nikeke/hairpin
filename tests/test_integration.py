@@ -6,12 +6,18 @@ from hairpin.interpreter import Interpreter
 from hairpin.types import HairpinError, HString
 
 
-# Load self-interpreter definitions (everything except the test line)
+# Load self-interpreter definitions (stop before the demo/test block)
 _selfinterp_path = os.path.join(
     os.path.dirname(__file__), '..', 'examples', 'selfinterp.hp')
 with open(_selfinterp_path) as f:
     _lines = f.read().strip().split('\n')
-_SELFINTERP_DEFS = '\n'.join(_lines[:-1])
+# Strip trailing demo lines (everything after 'run-hairpin' def)
+_cut = len(_lines)
+for _i, _line in enumerate(_lines):
+    if _line.strip().startswith('# ---- Test'):
+        _cut = _i
+        break
+_SELFINTERP_DEFS = '\n'.join(_lines[:_cut])
 
 
 def run_with_io(source: str, input_lines: list[str] | None = None, capsys=None):
