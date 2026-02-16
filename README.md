@@ -163,3 +163,7 @@ The interactive REPL supports readline with tab completion and the following com
 pip install pytest
 pytest
 ```
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
