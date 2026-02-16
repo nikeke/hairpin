@@ -130,7 +130,7 @@ python -m hairpin examples/fib.hp
 
 ### Prime Counting (`examples/primes.hp`)
 
-Counts primes up to 10,000 by trial division:
+Counts primes up to 10,000 with a cons-list Sieve of Eratosthenes:
 
 ```
 python -m hairpin examples/primes.hp

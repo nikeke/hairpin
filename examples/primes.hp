@@ -1,40 +1,68 @@
-# Sieve of Eratosthenes in Hairpin
-# Finds all primes up to N using trial division
-# (No arrays, so we use trial division instead of a true sieve)
+# Sieve of Eratosthenes in Hairpin using cons lists
+# Builds odd candidates 3,5,7,...,N then filters multiples.
 
-# is-prime: [N -- BOOL]
+# reverse: [LIST -- LIST]
 (
-    dup 2 < (drop false) (
-    dup 2 == (drop true) (
-    dup 2 % 0 == (drop false) (
-        # test odd divisors from 3 up to sqrt(n)
-        dup 'd' set
-        3 'divisor' set
-        (self
-         divisor dup * d <= (
-            d divisor % 0 ==
-                (false 'result' set)
-                (divisor 2 + 'divisor' set true 'result' set) if-else
-            result (exec) (drop) if-else
-         ) (drop true 'result' set) if-else)
-        exec drop
-        result
-    ) if-else
-    ) if-else
-    ) if-else
-) 'is-prime' def
+    'lst' set
+    nil 'acc' set
+    (self lst
+        (lst head acc cons 'acc' set
+         lst tail 'lst' set
+         exec)
+        (drop) if-else)
+    exec
+    acc
+) 'reverse' def
 
-# Main loop: check every number from 2 to N
+# filter-multiples: [LIST P -- LIST]
+# Removes multiples of P, preserving order
+(
+    'p' set
+    'lst' set
+    nil 'acc' set
+    (self lst
+        (lst head 'x' set
+         x p % 0 !=
+            (x acc cons 'acc' set) if
+         lst tail 'lst' set
+         exec)
+        (drop) if-else)
+    exec
+    acc reverse
+) 'filter-multiples' def
+
+# list-length: [LIST -- INT]
+(
+    'lst' set
+    0 'len' set
+    (self lst
+        (len 1 + 'len' set lst tail 'lst' set exec)
+        (drop) if-else)
+    exec
+    len
+) 'list-length' def
+
+# Build odd candidates 3, 5, 7, ..., limit
 10000 'limit' set
-0 'count' set
-2 'n' set
+nil 'cands' set
+limit 2 % 0 == (limit 1 -) (limit) if-else 'n' set
 (self
- n limit <=
-    (n is-prime
-        (count 1 + 'count' set) if
-     n 1 + 'n' set
+ n 3 >=
+    (n cands cons 'cands' set
+     n 2 - 'n' set
      exec) if)
 exec drop
+
+# Sieve: pick smallest prime p, filter its multiples, stop when p*p > limit
+1 'count' set
+(self cands
+    (cands head 'p' set
+     count 1 + 'count' set
+     p dup * limit <=
+        (cands tail p filter-multiples 'cands' set exec)
+        (cands tail list-length count + 'count' set) if-else)
+    (drop) if-else)
+exec
 
 'Primes up to ' print
 limit print '\n' print
