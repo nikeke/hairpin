@@ -59,3 +59,5 @@ These are non-obvious design decisions — refer to `notes.md` for the full spec
 When changing semantics that affect `examples/selfinterp.hp`, update the self-interpreter and `tests/test_integration.py` together so the host interpreter and self-interpreter stay aligned.
 
 When updating `README.md`, describe the current state directly. Avoid changelog-style phrasing like "now", "still", or comparisons against an older state unless the section is explicitly historical.
+
+When refreshing benchmark numbers, check machine load first and wait for a low-load window long enough to make the results comparable before running `benchmarks/run_benchmarks.py`.

@@ -177,15 +177,15 @@ python benchmarks/run_benchmarks.py
 python benchmarks/run_benchmarks.py --markdown
 ```
 
-The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linux. They reflect the current interpreter, including cached internal bytecode for executed code objects.
+The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linux after waiting for a low-load window. They reflect the current interpreter, including cached internal bytecode for executed code objects.
 
 | Benchmark | Description | Median of 5 runs | Individual runs |
 |-----------|-------------|------------------|-----------------|
-| `countdown` | tail-recursive integer/control-flow loop | 5.163s | 5.112s, 5.146s, 5.163s, 5.171s, 5.211s |
-| `fib-mod` | large integer arithmetic with TCO loop | 0.452s | 0.452s, 0.454s, 0.454s, 0.452s, 0.450s |
-| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 5.738s | 5.685s, 5.735s, 5.771s, 5.738s, 5.769s |
-| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 0.620s | 0.620s, 0.619s, 0.618s, 0.626s, 0.634s |
-| `list-reverse` | tail-recursive list construction and repeated reversal | 3.178s | 3.178s, 3.175s, 3.178s, 3.182s, 3.167s |
+| `countdown` | tail-recursive integer/control-flow loop | 5.303s | 5.273s, 5.297s, 5.312s, 5.303s, 5.338s |
+| `fib-mod` | large integer arithmetic with TCO loop | 0.433s | 0.433s, 0.434s, 0.434s, 0.433s, 0.433s |
+| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 5.723s | 5.742s, 5.679s, 5.747s, 5.723s, 5.669s |
+| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 0.614s | 0.612s, 0.613s, 0.614s, 0.616s, 0.619s |
+| `list-reverse` | tail-recursive list construction and repeated reversal | 3.198s | 3.188s, 3.184s, 3.208s, 3.198s, 3.198s |
 
 Treat these as comparative baselines rather than fixed targets; they are most useful for measuring changes against the same workload mix on the same machine.
 

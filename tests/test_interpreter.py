@@ -181,6 +181,18 @@ class TestNamespace:
         interp = run("(x 1 +) 'bump-x' def 5 'x' set bump-x 7 'x' set bump-x")
         assert stack(interp) == [6, 8]
 
+    def test_compiled_literal_set_and_get(self):
+        interp = run("(41 'x' set 'x' get) 'prog' def prog")
+        assert stack(interp) == [41]
+
+    def test_compiled_literal_def(self):
+        interp = run("((1 +) 'inc' def 5 inc) 'prog' def prog")
+        assert stack(interp) == [6]
+
+    def test_compiled_dynamic_name_falls_back(self):
+        interp = run("('x' 'name' set 41 name set name get) 'prog' def prog")
+        assert stack(interp) == [41]
+
 
 class TestControlFlow:
     def test_if_true(self):

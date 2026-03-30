@@ -2,9 +2,12 @@
 
 from hairpin.bytecode import (
     OP_CALL_PRIMITIVE,
+    OP_DEF_LITERAL_NAME,
+    OP_GET_LITERAL_NAME,
     OP_LOAD_NAME,
     OP_LOAD_NAME_TAIL,
     OP_PUSH_LITERAL,
+    OP_SET_LITERAL_NAME,
     OP_TCO_EXEC,
     OP_TCO_IF,
     OP_TCO_IF_ELSE,
@@ -131,6 +134,9 @@ class Interpreter:
         repl_commands = self.repl_commands
         append = stack.append
         execute_in_context = self.execute_in_context
+        compile_code = self.compile_code
+        use_bytecode = self.use_bytecode
+        pop = self.pop
         tco_exec = self._tco_exec
         if_tco = self._primitives_tco['if']
         if_else_tco = self._primitives_tco['if-else']
@@ -161,6 +167,31 @@ class Interpreter:
 
             if op == OP_TCO_IF_ELSE:
                 return if_else_tco(self)
+
+            if op == OP_SET_LITERAL_NAME:
+                namespace[ops[pc]] = ('value', pop())
+                pc += 1
+                continue
+
+            if op == OP_DEF_LITERAL_NAME:
+                name = ops[pc]
+                code = pop()
+                if not isinstance(code, HCode):
+                    raise TypeError_(f"def expects a code object, got {code.type_name()}")
+                if use_bytecode:
+                    compile_code(code)
+                namespace[name] = ('code', code)
+                pc += 1
+                continue
+
+            if op == OP_GET_LITERAL_NAME:
+                name = ops[pc]
+                entry = namespace.get(name)
+                if entry is None:
+                    raise HairpinError(f"Undefined word '{name}'")
+                append(entry[1])
+                pc += 1
+                continue
 
             name = ops[pc]
             line = ops[pc + 1]
