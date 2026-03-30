@@ -120,12 +120,22 @@ class TestTCO:
         assert val.value == 10001
 
 
-def _run_in_selfinterp(prog, capsys):
+def _run_in_selfinterp(prog, capsys, input_lines: list[str] | None = None):
     """Run a Hairpin program through the self-interpreter."""
     interp = Interpreter()
     interp.run(_SELFINTERP_DEFS)
     interp.stack.append(HString(prog))
-    interp.run('run-hairpin')
+    if input_lines is not None:
+        import builtins
+        orig = builtins.input
+        it = iter(input_lines)
+        builtins.input = lambda *a: next(it)
+        try:
+            interp.run('run-hairpin')
+        finally:
+            builtins.input = orig
+    else:
+        interp.run('run-hairpin')
     return capsys.readouterr().out
 
 
@@ -221,6 +231,57 @@ class TestSelfInterpreter:
     def test_nested_code_in_exec(self, capsys):
         out = _run_in_selfinterp('(true (42 print) if) exec', capsys)
         assert out == '42'
+
+    def test_code_literal_type(self, capsys):
+        assert _run_in_selfinterp('(1 2 +) type print', capsys) == 'code'
+
+    def test_code_truthiness(self, capsys):
+        assert _run_in_selfinterp('() not print', capsys) == 'true'
+        assert _run_in_selfinterp('(1) not print', capsys) == 'false'
+
+    def test_self_returns_original_code_object(self, capsys):
+        prog = (
+            "0 'count' set "
+            "(count 1 + 'count' set self 'loop' set count 2 < (loop exec) if) "
+            "exec count print"
+        )
+        assert _run_in_selfinterp(prog, capsys) == '2'
+
+    def test_self_interpreter_tco(self, capsys):
+        prog = (
+            "1 'i' set "
+            "(self i 3000 <= (i 1 + 'i' set exec) if) "
+            "exec i print"
+        )
+        assert _run_in_selfinterp(prog, capsys) == '3001'
+
+    def test_float_literals(self, capsys):
+        assert _run_in_selfinterp('3.14 print', capsys) == '3.14'
+        assert _run_in_selfinterp('1e2 print', capsys) == '100.0'
+
+    def test_float_primitive(self, capsys):
+        assert _run_in_selfinterp("'3.25' float print", capsys) == '3.25'
+        assert _run_in_selfinterp('42 float print', capsys) == '42.0'
+
+    def test_input_primitive(self, capsys):
+        assert _run_in_selfinterp('input print', capsys, input_lines=['hello']) == 'hello'
+
+    def test_parse_error_unmatched_rparen(self, capsys):
+        out = _run_in_selfinterp(')', capsys)
+        assert 'Parse error' in out
+
+    def test_parse_error_unclosed_code(self, capsys):
+        out = _run_in_selfinterp('(1 2', capsys)
+        assert 'Parse error' in out
+
+    def test_undefined_word_halts(self, capsys):
+        out = _run_in_selfinterp('1 nosuch 2 print', capsys)
+        assert "Undefined word 'nosuch'" in out
+        assert not out.endswith('2')
+
+    def test_extended_string_escapes(self, capsys):
+        prog = "'\\r\\\\\\'\\0\\a\\b\\f\\v' print"
+        assert _run_in_selfinterp(prog, capsys) == "\r\\'\0\a\b\f\v"
 
     def test_fibonacci(self, capsys):
         """Compute first 10 Fibonacci numbers via the self-interpreter."""

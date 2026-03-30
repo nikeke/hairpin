@@ -1,10 +1,22 @@
 # Hairpin self-interpreter
-# Interprets a subset of Hairpin written in Hairpin itself.
+# Interprets Hairpin written in Hairpin itself.
+
+# Internal tag for simulated target-language code objects.
+'__hairpin-code-object__' '__code-tag' set
 
 # ---- Character helpers ----
 
 (dup '0' >= swap '9' <= ==) 'is-digit' def
-(' ' ==) 'is-space' def
+
+('sc' set
+ sc ' ' == (true)
+   (sc '\t' == (true)
+     (sc '\n' == (true)
+       (sc '\r' == (true) (false) if-else) if-else) if-else) if-else
+) 'is-space' def
+
+('sc' set sc '+' == (true) (sc '-' ==) if-else) 'is-signchar' def
+('ec' set ec 'e' == (true) (ec 'E' ==) if-else) 'is-expchar' def
 
 # is-wordchar: true if not a delimiter
 ('wc' set
@@ -22,6 +34,39 @@
    (dup head 'rh' set tail swap rh swap cons swap reverse)
    (drop) if-else
 ) 'reverse' def
+
+# ---- Error and code helpers ----
+
+nil '__error' set
+nil '__tailcall' set
+nil 'current-code' set
+nil 'current-code-stack' set
+
+(nil '__error' set) 'clear-error' def
+('msg' set msg '__error' set) 'fail' def
+(__error not not) 'has-error' def
+
+(__code-tag swap cons) 'make-code' def
+
+('cv' set
+ cv type 'cons' ==
+   (cv head type 'string' ==
+      (cv head __code-tag ==)
+      (false) if-else)
+   (false) if-else
+) 'is-code' def
+
+(tail) 'code-body' def
+
+(dup is-code
+   (drop 'code')
+   (type) if-else
+) 'target-type' def
+
+(dup is-code
+   (code-body not not)
+   (not not) if-else
+) 'target-bool' def
 
 # ---- Tokenizer ----
 
@@ -41,6 +86,54 @@
    (rchars racc) if-else
 ) 'read-digits' def
 
+# read-exp-part: charlist acc -- charlist numstring
+('eacc' set 'echars' set
+ echars head eacc swap + 'eacc' set
+ echars tail 'echars' set
+ echars
+   (echars head is-signchar
+      (echars head eacc swap + 'eacc' set
+       echars tail 'echars' set)
+      () if-else)
+   () if-else
+ echars
+   (echars head is-digit
+      (echars eacc read-digits)
+      ('Parse error: Invalid number literal' fail
+       echars eacc) if-else)
+   ('Parse error: Invalid number literal' fail
+    echars eacc) if-else
+) 'read-exp-part' def
+
+# read-number: charlist acc -- charlist token
+('nacc' set 'nchars' set
+ nchars nacc read-digits 'ntext' set 'rest' set
+ 'integer' 'kind' set
+ rest
+   (rest head '.' ==
+      (rest tail 'after-dot' set
+       after-dot
+         (after-dot head is-digit
+            (after-dot ntext '.' + read-digits 'ntext' set 'rest' set
+             'float' 'kind' set)
+            () if-else)
+         () if-else)
+      () if-else)
+   () if-else
+ rest
+   (rest head is-expchar
+      (rest ntext read-exp-part 'ntext' set 'rest' set
+       'float' 'kind' set)
+      () if-else)
+   () if-else
+ has-error
+   (rest 'integer' 0 cons)
+   (kind 'float' ==
+      (rest 'float' ntext float cons)
+      (rest 'integer' ntext integer cons) if-else)
+   if-else
+) 'read-number' def
+
 # read-word: charlist acc -- charlist wordstring
 ('wacc' set 'wchars' set
  wchars
@@ -52,6 +145,21 @@
 ) 'read-word' def
 
 # read-string-body: charlist acc -- charlist string
+('ec' set
+ ec 'n' == ('\n')
+   (ec 't' == ('\t')
+     (ec 'r' == ('\r')
+       (ec '\\' == ('\\')
+         (ec '\'' == ('\'')
+           (ec '0' == ('\0')
+             (ec 'a' == ('\a')
+               (ec 'b' == ('\b')
+                 (ec 'f' == ('\f')
+                   (ec 'v' == ('\v')
+                     (ec) if-else) if-else) if-else) if-else) if-else)
+           if-else) if-else) if-else) if-else) if-else
+) 'escape-char' def
+
 ('sacc' set 'schars' set
  schars
    (schars head 'rc' set schars tail 'schars' set
@@ -59,8 +167,7 @@
       (schars sacc)
       (rc '\\' ==
         (schars head 'ec' set schars tail 'schars' set
-         ec 'n' == ('\n') (ec 't' == ('\t') (ec) if-else) if-else
-         'esc' set
+         ec escape-char 'esc' set
          schars sacc esc + read-string-body)
         (schars sacc rc + read-string-body) if-else
       ) if-else)
@@ -93,14 +200,14 @@
             (src tail '' read-string-body 'sv' set 'src' set
              'string' sv cons tacc cons src swap tokenize-loop)
             (ch is-digit
-              (src '' read-digits 'nv' set 'src' set
-               'integer' nv cons tacc cons src swap tokenize-loop)
+              (src '' read-number 'tok' set 'src' set
+               tok tacc cons src swap tokenize-loop)
               (ch '-' ==
                 (src tail 'after-dash' set
                  after-dash
                    (after-dash head is-digit
-                     (after-dash '-' read-digits 'nv' set 'src' set
-                      'integer' nv cons tacc cons src swap tokenize-loop)
+                     (after-dash '-' read-number 'tok' set 'src' set
+                      tok tacc cons src swap tokenize-loop)
                      (src '' read-word 'wv' set 'src' set
                       wv classify-word tacc cons src swap tokenize-loop) if-else)
                    (src '' read-word 'wv' set 'src' set
@@ -124,10 +231,8 @@ nil 'pacc' set
 
 # parse-literal: token -- instruction
 (dup head 'plt' set tail 'plv' set
- plt 'integer' == ('push' plv integer cons)
-   (plt 'nil' == ('push' nil cons)
-     ('push' plv cons) if-else
-   ) if-else
+ plt 'nil' == ('push' nil cons)
+   ('push' plv cons) if-else
 ) 'parse-literal' def
 
 # parse-code: tokenlist -- remaining program
@@ -143,14 +248,20 @@ nil 'pacc' set
         pacc-stack tail 'pacc-stack' set)
        (ttype 'lparen' ==
          (parse-code 'sub' set 'rest' set
-          'code' sub cons pacc cons 'pacc' set rest parse-code-loop)
+          has-error
+            (nil nil)
+            (sub make-code 'push' swap cons pacc cons 'pacc' set
+             rest parse-code-loop) if-else)
          (ttype 'word' ==
            ('word' tok tail cons pacc cons 'pacc' set parse-code-loop)
            (tok parse-literal pacc cons 'pacc' set parse-code-loop
            ) if-else
          ) if-else
        ) if-else
-    ) () if-else
+    ) ('Parse error: Unexpected end of input inside code object' fail
+       pacc-stack head 'pacc' set
+       pacc-stack tail 'pacc-stack' set
+       nil nil) if-else
  ) 'parse-code-loop' def
  parse-code-loop
 ) 'parse-code' def
@@ -158,22 +269,27 @@ nil 'pacc' set
 # parse-top: tokenlist -- program
 (nil 'ptacc' set
  (dup
-    (dup head 'tok' set tail
-     tok head 'ttype' set
-     ttype 'lparen' ==
+     (dup head 'tok' set tail
+      tok head 'ttype' set
+      ttype 'rparen' ==
+        (drop 'Parse error: Unexpected )' fail nil)
+        (ttype 'lparen' ==
        (parse-code 'sub' set 'rest' set
-        'code' sub cons ptacc cons 'ptacc' set rest parse-top-loop)
+        has-error
+          (nil)
+          (sub make-code 'push' swap cons ptacc cons 'ptacc' set
+           rest parse-top-loop) if-else)
        (ttype 'word' ==
          ('word' tok tail cons ptacc cons 'ptacc' set parse-top-loop)
          (tok parse-literal ptacc cons 'ptacc' set parse-top-loop
          ) if-else
-       ) if-else
+       ) if-else) if-else
     ) (drop nil ptacc reverse) if-else
  ) 'parse-top-loop' def
  parse-top-loop
 ) 'parse-top' def
 
-(tokenize parse-top) 'parse' def
+(clear-error nil 'pacc-stack' set nil 'pacc' set tokenize parse-top) 'parse' def
 
 # ---- Evaluator ----
 # Uses globals: stk (meta-stack), env (meta-env)
@@ -227,47 +343,65 @@ nil 'pacc' set
                            (wname '>=' ==
                              (meta-pop 'b2' set meta-pop b2 >= meta-push)
                              (wname 'not' ==
-                               (meta-pop not meta-push)
+                               (meta-pop target-bool not meta-push)
                                (wname 'integer' ==
                                  (meta-pop integer meta-push)
-                                 (wname 'cons' ==
-                                   (meta-pop 'ct' set meta-pop ct cons meta-push)
-                                   (wname 'head' ==
-                                     (meta-pop head meta-push)
-                                     (wname 'tail' ==
-                                       (meta-pop tail meta-push)
-                                       (wname 'chars' ==
-                                         (meta-pop chars meta-push)
-                                         (wname 'string' ==
-                                           (meta-pop string meta-push)
-                                           (wname 'type' ==
-                                             (meta-pop type meta-push)
-                                             (wname 'print' ==
-                                               (meta-pop print)
-                                               (wname 'set' ==
-                                                 (meta-pop 'sn' set meta-pop 'sv' set
-                                                  sn 'value' sv env-set)
-                                                 (wname 'get' ==
-                                                   (meta-pop env env-lookup tail meta-push)
-                                                   (wname 'def' ==
-                                                     (meta-pop 'dn' set meta-pop 'dv' set
-                                                      dn 'code' dv env-set)
-                                                     (wname 'exec' ==
-                                                       (meta-pop eval-prog)
-                                                       (wname 'if' ==
-                                                         (meta-pop 'ic' set meta-pop
-                                                          (ic eval-prog) () if-else)
-                                                         (wname 'if-else' ==
-                                                           (meta-pop 'iec' set meta-pop 'iet' set meta-pop
-                                                            (iet eval-prog) (iec eval-prog) if-else)
-                                                           (wname 'self' ==
-                                                             (current-prog meta-push)
-                                                             (wname env env-lookup 'lu' set
-                                                              lu
-                                                                (lu head 'value' ==
-                                                                  (lu tail meta-push)
-                                                                  (lu tail eval-prog) if-else)
-                                                                ('Undefined: ' wname + print) if-else
+                                 (wname 'float' ==
+                                   (meta-pop float meta-push)
+                                   (wname 'cons' ==
+                                     (meta-pop 'ct' set meta-pop ct cons meta-push)
+                                     (wname 'head' ==
+                                       (meta-pop 'hv' set
+                                        hv target-type 'cons' ==
+                                          (hv head meta-push)
+                                          ('head expects a cons cell, got ' hv target-type + fail) if-else)
+                                       (wname 'tail' ==
+                                         (meta-pop 'tv' set
+                                          tv target-type 'cons' ==
+                                            (tv tail meta-push)
+                                            ('tail expects a cons cell, got ' tv target-type + fail) if-else)
+                                         (wname 'chars' ==
+                                           (meta-pop chars meta-push)
+                                           (wname 'string' ==
+                                             (meta-pop string meta-push)
+                                             (wname 'type' ==
+                                               (meta-pop target-type meta-push)
+                                               (wname 'print' ==
+                                                 (meta-pop print)
+                                                 (wname 'input' ==
+                                                   (input meta-push)
+                                                   (wname 'set' ==
+                                                     (meta-pop 'sn' set meta-pop 'sv' set
+                                                      sn 'value' sv env-set)
+                                                     (wname 'get' ==
+                                                       (meta-pop 'gn' set
+                                                        gn env env-lookup 'lu' set
+                                                        lu
+                                                          (lu tail meta-push)
+                                                          ('Undefined word \'' gn + '\'' + fail) if-else)
+                                                       (wname 'def' ==
+                                                         (meta-pop 'dn' set meta-pop 'dv' set
+                                                          dn 'code' dv env-set)
+                                                         (wname 'exec' ==
+                                                           (meta-pop eval-code)
+                                                           (wname 'if' ==
+                                                             (meta-pop 'ic' set meta-pop target-bool
+                                                              (ic eval-code) () if-else)
+                                                             (wname 'if-else' ==
+                                                               (meta-pop 'iec' set meta-pop 'iet' set meta-pop target-bool
+                                                                (iet eval-code) (iec eval-code) if-else)
+                                                               (wname 'self' ==
+                                                                 (current-code
+                                                                   (current-code meta-push)
+                                                                   ('self used outside of a code object' fail) if-else)
+                                                                 (wname env env-lookup 'lu' set
+                                                                  lu
+                                                                    (lu head 'value' ==
+                                                                      (lu tail meta-push)
+                                                                      (lu tail eval-code) if-else)
+                                                                    ('Undefined word \'' wname + '\'' + fail) if-else
+                                                                 ) if-else
+                                                               ) if-else
                                                              ) if-else
                                                            ) if-else
                                                          ) if-else
@@ -300,33 +434,95 @@ nil 'pacc' set
    ) if-else
 ) 'eval-word' def
 
+# eval-word-tail: name --
+('wname' set
+ nil '__tailcall' set
+ wname 'exec' ==
+   (meta-pop '__tailcall' set)
+   (wname 'if' ==
+     (meta-pop 'ic' set meta-pop target-bool
+      (ic '__tailcall' set) () if-else)
+     (wname 'if-else' ==
+       (meta-pop 'iec' set meta-pop 'iet' set meta-pop target-bool
+        (iet '__tailcall' set) (iec '__tailcall' set) if-else)
+       (wname env env-lookup 'lu' set
+        lu
+          (lu head 'code' ==
+            (lu tail '__tailcall' set)
+            (wname eval-word) if-else)
+          (wname eval-word) if-else) if-else)
+     if-else)
+   if-else
+) 'eval-word-tail' def
+
 # eval-instr: instr --
 (dup head 'itype' set tail 'ival' set
  itype 'push' ==
    (ival meta-push)
-   (itype 'code' ==
-     (ival meta-push)
-     (ival eval-word) if-else
-   ) if-else
+   (ival eval-word) if-else
 ) 'eval-instr' def
 
-# eval-prog: program --
-(dup 'current-prog' set
- dup
-   (dup head eval-instr tail eval-prog)
+# eval-instr-tail: instr --
+(dup head 'itype' set tail 'ival' set
+ itype 'push' ==
+   (ival meta-push)
+   (ival eval-word-tail) if-else
+) 'eval-instr-tail' def
+
+# eval-top: program --
+(dup
+   (dup head eval-instr
+    has-error
+      (drop)
+      (tail eval-top) if-else)
    (drop) if-else
-) 'eval-prog' def
+) 'eval-top' def
+
+# eval-code-body: program --
+(dup
+   (dup head 'ci' set tail 'rest' set
+    rest
+      (ci eval-instr
+       has-error
+         ()
+         (rest eval-code-body) if-else)
+      (ci eval-instr-tail
+       has-error
+         ()
+         (__tailcall
+           (__tailcall code-body eval-code-body)
+           () if-else) if-else) if-else)
+   (drop) if-else
+) 'eval-code-body' def
+
+# eval-code: code --
+(current-code current-code-stack cons 'current-code-stack' set
+ 'entry-code' set
+ entry-code 'current-code' set
+ nil '__tailcall' set
+ entry-code code-body eval-code-body
+ current-code-stack head 'current-code' set
+ current-code-stack tail 'current-code-stack' set
+) 'eval-code' def
 
 # run-hairpin: source-string --
 (parse 'prog' set
  nil 'stk' set
  nil 'env' set
- prog eval-prog
+ nil 'current-code' set
+ nil 'current-code-stack' set
+ nil '__tailcall' set
+ has-error
+   (__error print)
+   (prog eval-top
+    has-error
+      (__error print)
+      () if-else) if-else
 ) 'run-hairpin' def
 
 # ---- Test: square ----
 '(dup *) \'square\' def 7 square print' run-hairpin
 
-# ---- Test: Fibonacci (first 100) ----
+# ---- Test: Fibonacci (first 1000) ----
 '\n' print
-'0 \'a\' set 1 \'b\' set 1 \'i\' set (self i 100 <= (a print \'\\n\' print b \'temp\' set a b + \'b\' set temp \'a\' set i 1 + \'i\' set exec) if) exec drop' run-hairpin
+'0 \'a\' set 1 \'b\' set 1 \'i\' set (self i 1000 <= (a print \'\\n\' print b \'temp\' set a b + \'b\' set temp \'a\' set i 1 + \'i\' set exec) if) exec drop' run-hairpin
