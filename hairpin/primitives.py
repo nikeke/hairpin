@@ -125,55 +125,94 @@ def register_primitives(interp):
 
     def _arith(vm, op):
         b, a = vm.pop(), vm.pop()
+        a_type = type(a)
+        b_type = type(b)
         # int-string multiplication (both orders)
         if op == '*':
-            if isinstance(a, HInt) and isinstance(b, HString):
+            if a_type is HInt and b_type is HString:
                 vm.push(HString(b.value * a.value))
                 return
-            if isinstance(a, HString) and isinstance(b, HInt):
+            if a_type is HString and b_type is HInt:
                 vm.push(HString(a.value * b.value))
                 return
-        if type(a) != type(b):
+        if a_type is not b_type:
             raise TypeError_(
                 f"Cannot apply '{op}' to {a.type_name()} and {b.type_name()}"
             )
-        if isinstance(a, HInt):
-            if op == '/' and b.value == 0:
-                raise HairpinError("Division by zero")
-            if op == '%' and b.value == 0:
-                raise HairpinError("Modulo by zero")
-            ops = {'+': lambda: a.value + b.value, '-': lambda: a.value - b.value,
-                   '*': lambda: a.value * b.value, '/': lambda: a.value // b.value,
-                   '%': lambda: a.value % b.value}
-            vm.push(HInt(ops[op]()))
-        elif isinstance(a, HFloat):
-            if op in ('/', '%') and b.value == 0.0:
-                raise HairpinError(f"{'Division' if op == '/' else 'Modulo'} by zero")
-            ops = {'+': lambda: a.value + b.value, '-': lambda: a.value - b.value,
-                   '*': lambda: a.value * b.value, '/': lambda: a.value / b.value,
-                   '%': lambda: a.value % b.value}
-            vm.push(HFloat(ops[op]()))
-        elif isinstance(a, HString) and op == '+':
+        if a_type is HInt:
+            a_val = a.value
+            b_val = b.value
+            if op == '/':
+                if b_val == 0:
+                    raise HairpinError("Division by zero")
+                vm.push(HInt(a_val // b_val))
+                return
+            if op == '%':
+                if b_val == 0:
+                    raise HairpinError("Modulo by zero")
+                vm.push(HInt(a_val % b_val))
+                return
+            if op == '+':
+                vm.push(HInt(a_val + b_val))
+                return
+            if op == '-':
+                vm.push(HInt(a_val - b_val))
+                return
+            if op == '*':
+                vm.push(HInt(a_val * b_val))
+                return
+        elif a_type is HFloat:
+            a_val = a.value
+            b_val = b.value
+            if op == '/':
+                if b_val == 0.0:
+                    raise HairpinError("Division by zero")
+                vm.push(HFloat(a_val / b_val))
+                return
+            if op == '%':
+                if b_val == 0.0:
+                    raise HairpinError("Modulo by zero")
+                vm.push(HFloat(a_val % b_val))
+                return
+            if op == '+':
+                vm.push(HFloat(a_val + b_val))
+                return
+            if op == '-':
+                vm.push(HFloat(a_val - b_val))
+                return
+            if op == '*':
+                vm.push(HFloat(a_val * b_val))
+                return
+        elif a_type is HString and op == '+':
             vm.push(HString(a.value + b.value))
-        else:
-            raise TypeError_(
-                f"Cannot apply '{op}' to {a.type_name()} and {b.type_name()}"
-            )
+            return
+        raise TypeError_(
+            f"Cannot apply '{op}' to {a.type_name()} and {b.type_name()}"
+        )
 
     # --- Comparison ---
 
     def _compare(vm, op):
         b, a = vm.pop(), vm.pop()
-        if type(a) != type(b):
+        a_type = type(a)
+        if a_type is not type(b):
             raise TypeError_(
                 f"Cannot compare {a.type_name()} and {b.type_name()}"
             )
-        ops = {
-            '==': lambda: a.value == b.value, '!=': lambda: a.value != b.value,
-            '<': lambda: a.value < b.value, '<=': lambda: a.value <= b.value,
-            '>': lambda: a.value > b.value, '>=': lambda: a.value >= b.value,
-        }
-        vm.push(HBool(ops[op]()))
+        a_val = a.value
+        b_val = b.value
+        if op == '==':
+            vm.push(HBool(a_val == b_val))
+        elif op == '!=':
+            vm.push(HBool(a_val != b_val))
+        elif op == '<':
+            vm.push(HBool(a_val < b_val))
+        elif op == '<=':
+            vm.push(HBool(a_val <= b_val))
+        elif op == '>':
+            vm.push(HBool(a_val > b_val))
+        else:
+            vm.push(HBool(a_val >= b_val))
 
     # --- Conversion ---
 

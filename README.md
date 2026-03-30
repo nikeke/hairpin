@@ -181,11 +181,11 @@ The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linu
 
 | Benchmark | Description | Median of 5 runs | Individual runs |
 |-----------|-------------|------------------|-----------------|
-| `countdown` | tail-recursive integer/control-flow loop | 8.179s | 7.973s, 8.171s, 8.199s, 8.218s, 8.179s |
-| `fib-mod` | large integer arithmetic with TCO loop | 0.714s | 0.714s, 0.712s, 0.714s, 0.715s, 0.714s |
-| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 7.921s | 7.904s, 7.895s, 7.938s, 7.921s, 8.303s |
-| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 4.430s | 4.464s, 4.430s, 4.430s, 4.418s, 4.448s |
-| `list-reverse` | tail-recursive list construction and repeated reversal | 4.138s | 4.122s, 4.143s, 4.138s, 4.154s, 4.132s |
+| `countdown` | tail-recursive integer/control-flow loop | 6.240s | 6.179s, 6.240s, 6.237s, 6.269s, 6.260s |
+| `fib-mod` | large integer arithmetic with TCO loop | 0.572s | 0.572s, 0.573s, 0.572s, 0.570s, 0.569s |
+| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 7.195s | 7.198s, 7.189s, 7.191s, 7.195s, 7.215s |
+| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 4.496s | 4.499s, 4.500s, 4.490s, 4.496s, 4.470s |
+| `list-reverse` | tail-recursive list construction and repeated reversal | 4.124s | 4.112s, 4.124s, 4.120s, 4.129s, 4.131s |
 
 Treat these as comparative baselines rather than fixed targets; they are most useful for measuring changes against the same workload mix on the same machine.
 

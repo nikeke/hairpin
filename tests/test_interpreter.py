@@ -156,6 +156,14 @@ class TestNamespace:
         interp = run("(1 +) 'x' def 99 'x' set x")
         assert stack(interp) == [99]
 
+    def test_set_invalidates_cached_def(self):
+        interp = run("(1 +) 'x' def 5 x 99 'x' set x")
+        assert stack(interp) == [6, 99]
+
+    def test_def_invalidates_cached_value(self):
+        interp = run("99 'x' set x drop (1 +) 'x' def 41 x")
+        assert stack(interp) == [42]
+
 
 class TestControlFlow:
     def test_if_true(self):
