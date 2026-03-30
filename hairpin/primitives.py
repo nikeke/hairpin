@@ -1,10 +1,37 @@
 """Hairpin primitive words."""
 
+from functools import lru_cache
+
 from hairpin.types import (
     HValue, HInt, HFloat, HString, HBool, HCode, HairpinError,
     HCons, HNil, NIL,
 )
 from hairpin.interpreter import TypeError_, StackUnderflow, _TailCall
+
+
+@lru_cache(maxsize=4096)
+def _single_char_string(ch: str) -> HString:
+    return HString(ch)
+
+
+def _build_chars_list(value: str) -> HValue:
+    result: HValue = NIL
+    cons = HCons
+    char_string = _single_char_string
+    for ch in reversed(value):
+        result = cons(char_string(ch), result)
+    return result
+
+
+@lru_cache(maxsize=8)
+def _cached_chars_list(value: str) -> HValue:
+    return _build_chars_list(value)
+
+
+def _chars_list(value: str) -> HValue:
+    if len(value) <= 32768:
+        return _cached_chars_list(value)
+    return _build_chars_list(value)
 
 
 def register_primitives(interp):
@@ -310,19 +337,18 @@ def register_primitives(interp):
         val = vm.pop()
         if not isinstance(val, HString):
             raise TypeError_(f"chars expects a string, got {val.type_name()}")
-        result = NIL
-        for ch in reversed(val.value):
-            result = HCons(HString(ch), result)
-        vm.push(result)
+        vm.push(_chars_list(val.value))
 
     def prim_string(vm):
         val = vm.pop()
         parts = []
+        append = parts.append
         cur = val
         while isinstance(cur, HCons):
-            if not isinstance(cur.head, HString):
-                raise TypeError_(f"string expects a list of strings, got {cur.head.type_name()}")
-            parts.append(cur.head.value)
+            head = cur.head
+            if not isinstance(head, HString):
+                raise TypeError_(f"string expects a list of strings, got {head.type_name()}")
+            append(head.value)
             cur = cur.tail
         if not isinstance(cur, HNil):
             raise TypeError_(f"string expects a proper list, got dotted pair")
