@@ -34,7 +34,7 @@ Hairpin programs are sequences of words evaluated left to right. Values are push
 
 - **Integers** — arbitrary precision: `42`, `-7`, `0`
 - **Floats** — IEEE 754: `3.14`, `-0.5`
-- **Strings** — single-quoted with `\n`, `\t`, `\\`, `\'` escapes: `'hello'`
+- **Strings** — single-quoted with C-like escapes such as `\n`, `\t`, `\r`, `\\`, `\'`, `\0`, `\a`, `\b`, `\f`, `\v`: `'hello'`
 - **Booleans** — `true`, `false`
 - **Code objects** — parenthesized code: `(1 2 +)`
 - **Cons cells** — pairs built with `cons`, inspected with `head`/`tail`
@@ -138,10 +138,12 @@ python -m hairpin examples/primes.hp
 
 ### Self-Interpreter (`examples/selfinterp.hp`)
 
-A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evaluator in ~330 lines. It supports arithmetic, comparisons, strings, booleans, `set`/`get`, `def`, `exec`, `if`, `if-else`, `self`, `cons`/`head`/`tail`, and user-defined words:
+A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evaluator in a single self-contained source file. It supports typed code objects, preserves the original current code object for `self`, performs tail-call-aware `exec`/`if`/`if-else`, supports float literals plus `float`/`input`, and halts on parse or undefined-word errors with a message.
+
+Internally it uses cons lists for tokens, AST, the meta-stack, and the environment, with a tagged representation for target-language code objects.
 
 ```
-python -m hairpin examples/selfinterp.hp    # prints 49, then the first 100 Fibonacci numbers
+python -m hairpin examples/selfinterp.hp    # prints 49, then the first 1000 Fibonacci numbers
 ```
 
 ## REPL
@@ -160,8 +162,10 @@ The interactive REPL supports readline with tab completion and the following com
 ## Tests
 
 ```bash
-pip install pytest
 pytest
+
+# Focus on the self-interpreter parity coverage
+pytest tests/test_integration.py -k selfinterp
 ```
 
 ## License
