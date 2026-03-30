@@ -1,0 +1,16 @@
+# Large integer arithmetic benchmark.
+
+0 'a' set
+1 'b' set
+0 'i' set
+
+(self
+ i 50000 <
+   (b 'next-a' set
+    a b + 'b' set
+    next-a 'a' set
+    i 1 + 'i' set
+    exec) if)
+exec drop
+
+a 1000000007 % print

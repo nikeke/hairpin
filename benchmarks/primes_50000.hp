@@ -1,0 +1,66 @@
+# Cons-list sieve benchmark.
+
+# reverse: [LIST -- LIST]
+(
+    'lst' set
+    nil 'acc' set
+    (self lst
+        (lst head acc cons 'acc' set
+         lst tail 'lst' set
+         exec)
+        (drop) if-else)
+    exec
+    acc
+) 'reverse' def
+
+# filter-multiples: [LIST P -- LIST]
+(
+    'p' set
+    'lst' set
+    nil 'acc' set
+    (self lst
+        (lst head 'x' set
+         x p % 0 !=
+            (x acc cons 'acc' set) if
+         lst tail 'lst' set
+         exec)
+        (drop) if-else)
+    exec
+    acc reverse
+) 'filter-multiples' def
+
+# list-length: [LIST -- INT]
+(
+    'lst' set
+    0 'len' set
+    (self lst
+        (len 1 + 'len' set
+         lst tail 'lst' set
+         exec)
+        (drop) if-else)
+    exec
+    len
+) 'list-length' def
+
+50000 'limit' set
+nil 'cands' set
+limit 2 % 0 == (limit 1 -) (limit) if-else 'n' set
+(self
+ n 3 >=
+    (n cands cons 'cands' set
+     n 2 - 'n' set
+     exec) if)
+exec drop
+
+1 'count' set
+(self cands
+    (cands head 'p' set
+     count 1 + 'count' set
+     p dup * limit <=
+        (cands tail p filter-multiples 'cands' set
+         exec)
+        (cands tail list-length count + 'count' set) if-else)
+    (drop) if-else)
+exec
+
+count print

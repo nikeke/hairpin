@@ -1,0 +1,32 @@
+# Tail-recursive list construction and reversal benchmark.
+
+# reverse: [ACC LIST -- REVERSED]
+(
+    dup
+        (dup head 'rh' set
+         tail
+         swap rh swap cons
+         swap reverse)
+        (drop) if-else
+) 'reverse' def
+
+# build-desc: [N ACC -- LIST]
+(
+    'acc' set
+    'n' set
+    n 0 >
+        (n 1 - n acc cons build-desc)
+        (acc) if-else
+) 'build-desc' def
+
+30000 nil build-desc 'lst' set
+1 'i' set
+
+(self
+ i 15 <=
+   (nil lst reverse 'lst' set
+    i 1 + 'i' set
+    exec) if)
+exec drop
+
+lst head print

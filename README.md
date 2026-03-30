@@ -168,6 +168,27 @@ pytest
 pytest tests/test_integration.py -k selfinterp
 ```
 
+## Benchmarks
+
+`benchmarks/run_benchmarks.py` runs a baseline suite aimed at the interpreter hot paths that matter for future performance work. It performs 1 warmup run and 5 timed runs per program, and it verifies each benchmark's stdout before reporting timings.
+
+```bash
+python benchmarks/run_benchmarks.py
+python benchmarks/run_benchmarks.py --markdown
+```
+
+The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linux.
+
+| Benchmark | Description | Median of 5 runs | Individual runs |
+|-----------|-------------|------------------|-----------------|
+| `countdown` | tail-recursive integer/control-flow loop | 8.179s | 7.973s, 8.171s, 8.199s, 8.218s, 8.179s |
+| `fib-mod` | large integer arithmetic with TCO loop | 0.714s | 0.714s, 0.712s, 0.714s, 0.715s, 0.714s |
+| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 7.921s | 7.904s, 7.895s, 7.938s, 7.921s, 8.303s |
+| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 4.430s | 4.464s, 4.430s, 4.430s, 4.418s, 4.448s |
+| `list-reverse` | tail-recursive list construction and repeated reversal | 4.138s | 4.122s, 4.143s, 4.138s, 4.154s, 4.132s |
+
+Treat these as comparative baselines rather than fixed targets; they are most useful for measuring changes against the same workload mix on the same machine.
+
 ## License
 
 MIT. See [`LICENSE`](LICENSE).

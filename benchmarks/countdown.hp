@@ -1,0 +1,5 @@
+# Tail-recursive countdown benchmark.
+
+1000000 'n' set
+(self n 0 > (n 1 - 'n' set exec) if) exec drop
+n print

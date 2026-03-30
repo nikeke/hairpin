@@ -1,0 +1,14 @@
+# String/list conversion benchmark.
+
+20000 'x' * 'seed' set
+seed 'orig' set
+1 'i' set
+
+(self
+ i 250 <=
+   (seed chars string 'seed' set
+    i 1 + 'i' set
+    exec) if)
+exec drop
+
+seed orig == print
