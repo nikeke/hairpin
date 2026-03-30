@@ -1,6 +1,12 @@
 """Hairpin runtime value types."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from hairpin.bytecode import BytecodeProgram
 
 
 class HairpinError(Exception):
@@ -78,6 +84,7 @@ class HBool(HValue):
 class HCode(HValue):
     instructions: list
     source_line: int = 0
+    bytecode: BytecodeProgram | None = None
 
     def to_bool(self) -> bool:
         return len(self.instructions) > 0

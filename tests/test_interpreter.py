@@ -164,6 +164,23 @@ class TestNamespace:
         interp = run("99 'x' set x drop (1 +) 'x' def 41 x")
         assert stack(interp) == [42]
 
+    def test_def_caches_bytecode(self):
+        interp = run("(1 +) 'inc' def")
+        kind, code = interp.namespace['inc']
+        assert kind == 'code'
+        assert code.bytecode is not None
+
+    def test_exec_lazily_compiles_code_value(self):
+        interp = run("1 (1 +) 'snippet' set snippet exec")
+        kind, code = interp.namespace['snippet']
+        assert kind == 'value'
+        assert code.bytecode is not None
+        assert stack(interp) == [2]
+
+    def test_compiled_code_preserves_dynamic_rebinding(self):
+        interp = run("(x 1 +) 'bump-x' def 5 'x' set bump-x 7 'x' set bump-x")
+        assert stack(interp) == [6, 8]
+
 
 class TestControlFlow:
     def test_if_true(self):
@@ -212,6 +229,19 @@ class TestSelfExec:
         """)
         output = capsys.readouterr().out
         assert output == "12345"
+
+    def test_compiled_def_tco_loop(self):
+        interp = run("""
+            1 'i' set
+            (self
+             i 10000 <=
+                (i 1 + 'i' set exec) if)
+            'loop' def
+            loop drop
+        """)
+        kind, val = interp.namespace['i']
+        assert kind == 'value'
+        assert val.value == 10001
 
 
 class TestIO:

@@ -83,6 +83,8 @@ def register_primitives(interp):
             raise TypeError_(f"def expects a string name, got {name.type_name()}")
         if not isinstance(code, HCode):
             raise TypeError_(f"def expects a code object, got {code.type_name()}")
+        if getattr(vm, 'use_bytecode', False):
+            vm.compile_code(code)
         vm.namespace[name.value] = ('code', code)
 
     # --- Control flow ---

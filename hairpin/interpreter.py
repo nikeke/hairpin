@@ -1,5 +1,16 @@
 """Hairpin interpreter — executes parsed instruction sequences."""
 
+from hairpin.bytecode import (
+    OP_CALL_PRIMITIVE,
+    OP_LOAD_NAME,
+    OP_LOAD_NAME_TAIL,
+    OP_PUSH_LITERAL,
+    OP_TCO_EXEC,
+    OP_TCO_IF,
+    OP_TCO_IF_ELSE,
+    BytecodeProgram,
+    compile_hcode,
+)
 from hairpin.parser import parse, PushLiteral, WordRef
 from hairpin.types import HValue, HCode, HairpinError
 
@@ -29,10 +40,11 @@ class _TailCall:
 
 
 class Interpreter:
-    def __init__(self):
+    def __init__(self, use_bytecode: bool = True):
         self.stack: list[HValue] = []
         self.namespace: dict[str, tuple[str, object]] = {}
         self.repl_commands: dict[str, callable] = {}
+        self.use_bytecode = use_bytecode
         self._current_code: HCode | None = None
         from hairpin.primitives import register_primitives
         register_primitives(self)
@@ -60,12 +72,20 @@ class Interpreter:
         self._current_code = code
         current = code
         while True:
-            result = self._execute_body(current.instructions)
+            result = self._execute_code(current)
             if isinstance(result, _TailCall):
                 current = result.code
             else:
                 break
         self._current_code = old_code
+
+    def compile_code(self, code: HCode) -> BytecodeProgram:
+        return compile_hcode(code, self._primitives)
+
+    def _execute_code(self, code: HCode):
+        if self.use_bytecode:
+            return self._execute_bytecode(self.compile_code(code))
+        return self._execute_body(code.instructions)
 
     def _execute_body(self, instructions: list):
         """Execute instructions. Returns _TailCall if tail position is a tail call."""
@@ -102,6 +122,71 @@ class Interpreter:
                 f"Undefined word '{instr.name}' at {instr.line}:{instr.col}"
             )
         return None
+
+    def _execute_bytecode(self, program: BytecodeProgram):
+        """Execute compiled bytecode for a code object."""
+        ops = program.ops
+        stack = self.stack
+        namespace = self.namespace
+        repl_commands = self.repl_commands
+        append = stack.append
+        execute_in_context = self.execute_in_context
+        tco_exec = self._tco_exec
+        if_tco = self._primitives_tco['if']
+        if_else_tco = self._primitives_tco['if-else']
+        pc = 0
+
+        while pc < len(ops):
+            op = ops[pc]
+            pc += 1
+
+            if op == OP_PUSH_LITERAL:
+                append(ops[pc])
+                pc += 1
+                continue
+
+            if op == OP_CALL_PRIMITIVE:
+                ops[pc](self)
+                pc += 1
+                continue
+
+            if op == OP_TCO_EXEC:
+                return tco_exec()
+
+            if op == OP_TCO_IF:
+                result = if_tco(self)
+                if isinstance(result, _TailCall):
+                    return result
+                continue
+
+            if op == OP_TCO_IF_ELSE:
+                return if_else_tco(self)
+
+            name = ops[pc]
+            line = ops[pc + 1]
+            col = ops[pc + 2]
+            pc += 3
+
+            repl_command = repl_commands.get(name)
+            if repl_command is not None:
+                repl_command(self)
+                continue
+
+            entry = namespace.get(name)
+            if entry is None:
+                raise UndefinedWord(f"Undefined word '{name}' at {line}:{col}")
+
+            kind, val = entry
+            if kind == 'value':
+                append(val)
+                continue
+            if kind == 'code':
+                if op == OP_LOAD_NAME_TAIL:
+                    return _TailCall(val)
+                execute_in_context(val)
+                continue
+
+            raise RuntimeError_(f"Unknown namespace entry kind {kind!r} for '{name}'")
 
     def _tco_exec(self) -> _TailCall:
         """Handle exec as a tail call."""
