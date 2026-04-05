@@ -10,6 +10,9 @@ Hairpin is a dynamically-typed RPN (Reverse Polish Notation) stack-based languag
 # Activate the venv (always do this first)
 source venv/bin/activate
 
+# Run module commands from the repository checkout
+export PYTHONPATH=src
+
 # Run a Hairpin program
 python -m hairpin program.hp
 
@@ -33,14 +36,14 @@ pytest tests/test_tokenizer.py -k test_integer_literal
 
 The interpreter pipeline is: **source text → tokenizer → parser → interpreter**.
 
-- `hairpin/tokenizer.py` — Lexes source into tokens (integers, floats, single-quoted strings, booleans, words, parens). Comment lines starting with `#` are stripped.
-- `hairpin/parser.py` — Converts token stream into instruction sequences. `(...)` groups become code objects.
-- `hairpin/types.py` — Runtime value types (`HInt`, `HFloat`, `HString`, `HBool`, `HCode`, `HNil`, `HCons`). `HCode` stores the parsed instruction list and can cache compiled bytecode for repeated execution.
-- `hairpin/bytecode.py` — Compiles `HCode` instruction lists into compact opcode streams for the host interpreter’s cached bytecode path, including literal-name peepholes, specialized arithmetic/comparison, stack/list, conditional, and `self` opcodes, plus compact records for generic namespace loads.
-- `hairpin/interpreter.py` — Executes instruction sequences against a data stack and a single namespace dictionary. Uses a trampoline in `execute_in_context` for tail-call optimization and runs cached bytecode for code objects by default, while preserving the tree-walk path as the semantic fallback. Tail-position `exec`, `if`, and `if-else` return the next `HCode` directly to the trampoline, the bytecode path keeps namespace rebinding dynamic, and common stack/list/control helpers are executed inline in `_execute_bytecode`.
-- `hairpin/primitives.py` — All built-in words (`get`, `set`, `def`, `if`, `+`, `print`, `dup`, `type`, `chars`, `string`, etc.) registered into the interpreter.
-- `hairpin/repl.py` — Interactive REPL with `/`-prefixed commands (`/stack`, `/words`, `/clear`, `/reset`, `/help`, `/builtins`). New commands are added via the `@repl_command` decorator.
-- `hairpin/__main__.py` — CLI entry point dispatching to file execution or REPL.
+- `src/hairpin/tokenizer.py` — Lexes source into tokens (integers, floats, single-quoted strings, booleans, words, parens). Comment lines starting with `#` are stripped.
+- `src/hairpin/parser.py` — Converts token stream into instruction sequences. `(...)` groups become code objects.
+- `src/hairpin/types.py` — Runtime value types (`HInt`, `HFloat`, `HString`, `HBool`, `HCode`, `HNil`, `HCons`). `HCode` stores the parsed instruction list and can cache compiled bytecode for repeated execution.
+- `src/hairpin/bytecode.py` — Compiles `HCode` instruction lists into compact opcode streams for the host interpreter’s cached bytecode path, including literal-name peepholes, specialized arithmetic/comparison, stack/list, conditional, and `self` opcodes, plus compact records for generic namespace loads.
+- `src/hairpin/interpreter.py` — Executes instruction sequences against a data stack and a single namespace dictionary. Uses a trampoline in `execute_in_context` for tail-call optimization and runs cached bytecode for code objects by default, while preserving the tree-walk path as the semantic fallback. Tail-position `exec`, `if`, and `if-else` return the next `HCode` directly to the trampoline, the bytecode path keeps namespace rebinding dynamic, and common stack/list/control helpers are executed inline in `_execute_bytecode`.
+- `src/hairpin/primitives.py` — All built-in words (`get`, `set`, `def`, `if`, `+`, `print`, `dup`, `type`, `chars`, `string`, etc.) registered into the interpreter.
+- `src/hairpin/repl.py` — Interactive REPL with `/`-prefixed commands (`/stack`, `/words`, `/clear`, `/reset`, `/help`, `/builtins`). New commands are added via the `@repl_command` decorator.
+- `src/hairpin/__main__.py` — CLI entry point dispatching to file execution or REPL.
 - `examples/selfinterp.hp` — Self-interpreter: a Hairpin program that tokenizes, parses, and evaluates Hairpin source code. It uses cons lists for tokens, AST, meta-stack, and environment, plus a tagged representation for target-language code objects so `type`, `self`, and tail-position execution more closely mirror the host interpreter.
 - `tests/test_integration.py` — End-to-end coverage for documented language examples and self-interpreter parity, including code-object typing, float/input support, parse/runtime error behavior, and deep TCO loops.
 

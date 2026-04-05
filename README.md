@@ -5,11 +5,11 @@ A minimalistic, dynamically-typed, stack-based language with RPN (Reverse Polish
 ## Quick Start
 
 ```bash
-# Run a program
-python -m hairpin program.hp
+# Run a program from the repository root
+PYTHONPATH=src python -m hairpin program.hp
 
-# Start the REPL
-python -m hairpin
+# Start the REPL from the repository root
+PYTHONPATH=src python -m hairpin
 ```
 
 Requires Python 3.13+.
@@ -125,7 +125,7 @@ x 0 > ('positive' print) ('non-positive' print) if-else
 Computes Fibonacci numbers up to F(10000) using arbitrary-precision integers:
 
 ```
-python -m hairpin examples/fib.hp
+PYTHONPATH=src python -m hairpin examples/fib.hp
 ```
 
 ### Prime Counting (`examples/primes.hp`)
@@ -133,7 +133,7 @@ python -m hairpin examples/fib.hp
 Counts primes up to 10,000 with a cons-list Sieve of Eratosthenes:
 
 ```
-python -m hairpin examples/primes.hp
+PYTHONPATH=src python -m hairpin examples/primes.hp
 ```
 
 ### Self-Interpreter (`examples/selfinterp.hp`)
@@ -143,7 +143,7 @@ A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evalu
 Internally it uses cons lists for tokens, AST, the meta-stack, and the environment, with a tagged representation for target-language code objects.
 
 ```
-python -m hairpin examples/selfinterp.hp    # prints 49, then the first 1000 Fibonacci numbers
+PYTHONPATH=src python -m hairpin examples/selfinterp.hp    # prints 49, then the first 1000 Fibonacci numbers
 ```
 
 ## REPL
