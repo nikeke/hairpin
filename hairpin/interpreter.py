@@ -221,7 +221,7 @@ class Interpreter:
                         code = stack_pop()
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
-                    if not isinstance(code, HCode):
+                    if type(code) is not HCode:
                         raise TypeError_(f"exec expects a code object, got {code.type_name()}")
                     return code
 
@@ -231,7 +231,7 @@ class Interpreter:
                         cond = stack_pop()
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
-                    if not isinstance(code, HCode):
+                    if type(code) is not HCode:
                         raise TypeError_(f"if expects a code object, got {code.type_name()}")
                     if cond.to_bool():
                         return code
@@ -243,9 +243,9 @@ class Interpreter:
                     cond = stack_pop()
                 except IndexError:
                     raise StackUnderflow("Stack underflow") from None
-                if not isinstance(then_code, HCode):
+                if type(then_code) is not HCode:
                     raise TypeError_(f"if-else expects code objects, got {then_code.type_name()}")
-                if not isinstance(else_code, HCode):
+                if type(else_code) is not HCode:
                     raise TypeError_(f"if-else expects code objects, got {else_code.type_name()}")
                 return then_code if cond.to_bool() else else_code
 
@@ -266,7 +266,7 @@ class Interpreter:
                         code = stack_pop()
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
-                    if not isinstance(code, HCode):
+                    if type(code) is not HCode:
                         raise TypeError_(f"def expects a code object, got {code.type_name()}")
                     if use_bytecode and code.bytecode is None:
                         compile_code(code)
@@ -440,7 +440,7 @@ class Interpreter:
                         val = stack[-1]
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
-                    if not isinstance(val, cons_type):
+                    if type(val) is not cons_type:
                         raise TypeError_(f"head expects a cons cell, got {val.type_name()}")
                     stack[-1] = val.head
                     continue
@@ -449,7 +449,7 @@ class Interpreter:
                     val = stack[-1]
                 except IndexError:
                     raise StackUnderflow("Stack underflow") from None
-                if not isinstance(val, cons_type):
+                if type(val) is not cons_type:
                     raise TypeError_(f"tail expects a cons cell, got {val.type_name()}")
                 stack[-1] = val.tail
                 continue
@@ -461,7 +461,7 @@ class Interpreter:
                         cond = stack_pop()
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
-                    if not isinstance(code, HCode):
+                    if type(code) is not HCode:
                         raise TypeError_(f"if expects a code object, got {code.type_name()}")
                     if cond.to_bool():
                         execute_in_context(code)
@@ -473,9 +473,9 @@ class Interpreter:
                     cond = stack_pop()
                 except IndexError:
                     raise StackUnderflow("Stack underflow") from None
-                if not isinstance(then_code, HCode):
+                if type(then_code) is not HCode:
                     raise TypeError_(f"if-else expects code objects, got {then_code.type_name()}")
-                if not isinstance(else_code, HCode):
+                if type(else_code) is not HCode:
                     raise TypeError_(f"if-else expects code objects, got {else_code.type_name()}")
                 execute_in_context(then_code if cond.to_bool() else else_code)
                 continue
