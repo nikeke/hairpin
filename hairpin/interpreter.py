@@ -166,7 +166,6 @@ class Interpreter:
         compile_code = self.compile_code
         use_bytecode = self.use_bytecode
         repl_get = repl_commands.get if repl_commands else None
-        namespace_get = namespace.get
         pc = 0
 
         while pc < ops_len:
@@ -194,11 +193,12 @@ class Interpreter:
                         repl_command(self)
                         continue
 
-                entry = namespace_get(name)
-                if entry is None:
+                try:
+                    entry = namespace[name]
+                except KeyError:
                     raise UndefinedWord(
                         f"Undefined word '{name}' at {load_op.line}:{load_op.col}"
-                    )
+                    ) from None
 
                 kind, val = entry
                 if kind == 'value':
@@ -274,9 +274,10 @@ class Interpreter:
                     continue
 
                 name = ops[pc]
-                entry = namespace_get(name)
-                if entry is None:
-                    raise HairpinError(f"Undefined word '{name}'")
+                try:
+                    entry = namespace[name]
+                except KeyError:
+                    raise HairpinError(f"Undefined word '{name}'") from None
                 append(entry[1])
                 pc += 1
                 continue
