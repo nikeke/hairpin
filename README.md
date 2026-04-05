@@ -177,15 +177,15 @@ python benchmarks/run_benchmarks.py
 python benchmarks/run_benchmarks.py --markdown
 ```
 
-The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linux after waiting for a low-load window. They reflect the current interpreter, including cached internal bytecode for executed code objects and compact generic name-load records in the bytecode stream.
+The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linux after waiting for a low-load window. They reflect the current interpreter, including cached internal bytecode for executed code objects, compact generic name-load records, and specialized arithmetic, stack/list, conditional, and `self`/tail-`exec` bytecode paths.
 
 | Benchmark | Description | Median of 5 runs | Individual runs |
 |-----------|-------------|------------------|-----------------|
-| `countdown` | tail-recursive integer/control-flow loop | 5.517s | 5.544s, 5.517s, 5.545s, 5.515s, 5.503s |
-| `fib-mod` | large integer arithmetic with TCO loop | 0.442s | 0.438s, 0.445s, 0.442s, 0.439s, 0.443s |
-| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 6.097s | 6.095s, 6.097s, 6.147s, 6.090s, 6.140s |
-| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 0.608s | 0.608s, 0.608s, 0.609s, 0.606s, 0.609s |
-| `list-reverse` | tail-recursive list construction and repeated reversal | 3.431s | 3.418s, 3.430s, 3.431s, 3.459s, 3.460s |
+| `countdown` | tail-recursive integer/control-flow loop | 4.460s | 4.460s, 4.452s, 4.475s, 4.457s, 4.469s |
+| `fib-mod` | large integer arithmetic with TCO loop | 0.345s | 0.346s, 0.345s, 0.344s, 0.346s, 0.345s |
+| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 4.671s | 4.678s, 4.671s, 4.696s, 4.659s, 4.652s |
+| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 0.606s | 0.606s, 0.606s, 0.606s, 0.611s, 0.606s |
+| `list-reverse` | tail-recursive list construction and repeated reversal | 2.489s | 2.489s, 2.481s, 2.489s, 2.493s, 2.479s |
 
 Treat these as comparative baselines rather than fixed targets; they are most useful for measuring changes against the same workload mix on the same machine.
 
