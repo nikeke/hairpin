@@ -1,6 +1,7 @@
 """Tests for the Hairpin interpreter and primitives."""
 
 import pytest
+from hairpin.bytecode import OP_ADD, OP_EQ, OP_MUL
 from hairpin.interpreter import Interpreter, StackUnderflow, UndefinedWord, TypeError_
 from hairpin.types import HInt, HFloat, HString, HBool, HCode, HairpinError
 
@@ -192,6 +193,21 @@ class TestNamespace:
     def test_compiled_dynamic_name_falls_back(self):
         interp = run("('x' 'name' set 41 name set name get) 'prog' def prog")
         assert stack(interp) == [41]
+
+    def test_compiled_arithmetic_and_comparison_opcodes(self):
+        interp = run("(1 2 + 3 ==) 'prog' def")
+        kind, code = interp.namespace['prog']
+        assert kind == 'code'
+        assert OP_ADD in code.bytecode.ops
+        assert OP_EQ in code.bytecode.ops
+
+    def test_compiled_specialized_multiply_semantics(self):
+        interp = run("(3 'ab' * 'ababab' ==) 'prog' def prog")
+        assert stack(interp) == [True]
+
+    def test_compiled_specialized_division_error(self):
+        with pytest.raises(HairpinError, match="Division by zero"):
+            run("(1 0 /) 'prog' def prog")
 
 
 class TestControlFlow:

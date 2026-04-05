@@ -1,13 +1,24 @@
 """Hairpin interpreter — executes parsed instruction sequences."""
 
 from hairpin.bytecode import (
+    OP_ADD,
     OP_CALL_PRIMITIVE,
+    OP_DIV,
     OP_DEF_LITERAL_NAME,
+    OP_EQ,
+    OP_GE,
     OP_GET_LITERAL_NAME,
+    OP_GT,
+    OP_LE,
+    OP_LT,
     OP_LOAD_NAME,
     OP_LOAD_NAME_TAIL,
+    OP_MOD,
+    OP_MUL,
+    OP_NE,
     OP_PUSH_LITERAL,
     OP_SET_LITERAL_NAME,
+    OP_SUB,
     OP_TCO_EXEC,
     OP_TCO_IF,
     OP_TCO_IF_ELSE,
@@ -15,7 +26,7 @@ from hairpin.bytecode import (
     compile_hcode,
 )
 from hairpin.parser import parse, PushLiteral, WordRef
-from hairpin.types import HValue, HCode, HairpinError
+from hairpin.types import HBool, HCode, HFloat, HInt, HString, HValue, HairpinError
 
 
 class RuntimeError_(HairpinError):
@@ -131,8 +142,10 @@ class Interpreter:
         ops = program.ops
         stack = self.stack
         namespace = self.namespace
+        primitives = self._primitives
         repl_commands = self.repl_commands
         append = stack.append
+        stack_pop = stack.pop
         execute_in_context = self.execute_in_context
         compile_code = self.compile_code
         use_bytecode = self.use_bytecode
@@ -167,6 +180,125 @@ class Interpreter:
 
             if op == OP_TCO_IF_ELSE:
                 return if_else_tco(self)
+
+            if OP_ADD <= op <= OP_GE:
+                try:
+                    b = stack_pop()
+                    a = stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                a_type = type(a)
+                b_type = type(b)
+
+                if op == OP_ADD:
+                    if a_type is HInt and b_type is HInt:
+                        append(HInt(a.value + b.value))
+                        continue
+                    if a_type is HFloat and b_type is HFloat:
+                        append(HFloat(a.value + b.value))
+                        continue
+                    if a_type is HString and b_type is HString:
+                        append(HString(a.value + b.value))
+                        continue
+                    append(a)
+                    append(b)
+                    primitives['+'](self)
+                    continue
+
+                if op == OP_SUB:
+                    if a_type is HInt and b_type is HInt:
+                        append(HInt(a.value - b.value))
+                        continue
+                    if a_type is HFloat and b_type is HFloat:
+                        append(HFloat(a.value - b.value))
+                        continue
+                    append(a)
+                    append(b)
+                    primitives['-'](self)
+                    continue
+
+                if op == OP_MUL:
+                    if a_type is HInt and b_type is HInt:
+                        append(HInt(a.value * b.value))
+                        continue
+                    if a_type is HFloat and b_type is HFloat:
+                        append(HFloat(a.value * b.value))
+                        continue
+                    if a_type is HInt and b_type is HString:
+                        append(HString(b.value * a.value))
+                        continue
+                    if a_type is HString and b_type is HInt:
+                        append(HString(a.value * b.value))
+                        continue
+                    append(a)
+                    append(b)
+                    primitives['*'](self)
+                    continue
+
+                if op == OP_DIV:
+                    if a_type is HInt and b_type is HInt:
+                        if b.value == 0:
+                            raise HairpinError("Division by zero")
+                        append(HInt(a.value // b.value))
+                        continue
+                    if a_type is HFloat and b_type is HFloat:
+                        if b.value == 0.0:
+                            raise HairpinError("Division by zero")
+                        append(HFloat(a.value / b.value))
+                        continue
+                    append(a)
+                    append(b)
+                    primitives['/'](self)
+                    continue
+
+                if op == OP_MOD:
+                    if a_type is HInt and b_type is HInt:
+                        if b.value == 0:
+                            raise HairpinError("Modulo by zero")
+                        append(HInt(a.value % b.value))
+                        continue
+                    if a_type is HFloat and b_type is HFloat:
+                        if b.value == 0.0:
+                            raise HairpinError("Modulo by zero")
+                        append(HFloat(a.value % b.value))
+                        continue
+                    append(a)
+                    append(b)
+                    primitives['%'](self)
+                    continue
+
+                if a_type is not b_type or a_type not in (HInt, HFloat, HString, HBool):
+                    append(a)
+                    append(b)
+                    if op == OP_EQ:
+                        primitives['=='](self)
+                    elif op == OP_NE:
+                        primitives['!='](self)
+                    elif op == OP_LT:
+                        primitives['<'](self)
+                    elif op == OP_LE:
+                        primitives['<='](self)
+                    elif op == OP_GT:
+                        primitives['>'](self)
+                    else:
+                        primitives['>='](self)
+                    continue
+
+                a_val = a.value
+                b_val = b.value
+                if op == OP_EQ:
+                    append(HBool(a_val == b_val))
+                elif op == OP_NE:
+                    append(HBool(a_val != b_val))
+                elif op == OP_LT:
+                    append(HBool(a_val < b_val))
+                elif op == OP_LE:
+                    append(HBool(a_val <= b_val))
+                elif op == OP_GT:
+                    append(HBool(a_val > b_val))
+                else:
+                    append(HBool(a_val >= b_val))
+                continue
 
             if op == OP_SET_LITERAL_NAME:
                 namespace[ops[pc]] = ('value', pop())

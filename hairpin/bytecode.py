@@ -18,6 +18,31 @@ OP_TCO_IF_ELSE = 6
 OP_SET_LITERAL_NAME = 7
 OP_DEF_LITERAL_NAME = 8
 OP_GET_LITERAL_NAME = 9
+OP_ADD = 10
+OP_SUB = 11
+OP_MUL = 12
+OP_DIV = 13
+OP_MOD = 14
+OP_EQ = 15
+OP_NE = 16
+OP_LT = 17
+OP_LE = 18
+OP_GT = 19
+OP_GE = 20
+
+SPECIALIZED_PRIMITIVES = {
+    "+": OP_ADD,
+    "-": OP_SUB,
+    "*": OP_MUL,
+    "/": OP_DIV,
+    "%": OP_MOD,
+    "==": OP_EQ,
+    "!=": OP_NE,
+    "<": OP_LT,
+    "<=": OP_LE,
+    ">": OP_GT,
+    ">=": OP_GE,
+}
 
 
 @dataclass(frozen=True)
@@ -79,6 +104,12 @@ def compile_hcode(code: HCode, primitives: dict[str, Callable]) -> BytecodeProgr
                 ops.append(OP_TCO_IF_ELSE)
                 index += 1
                 continue
+
+        specialized = SPECIALIZED_PRIMITIVES.get(name)
+        if specialized is not None:
+            ops.append(specialized)
+            index += 1
+            continue
 
         primitive = primitives.get(name)
         if primitive is not None:
