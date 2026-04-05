@@ -164,7 +164,6 @@ class Interpreter:
         cons_type = HCons
         execute_in_context = self.execute_in_context
         compile_code = self.compile_code
-        set_namespace_entry = self.set_namespace_entry
         use_bytecode = self.use_bytecode
         repl_get = repl_commands.get if repl_commands else None
         namespace_get = namespace.get
@@ -256,7 +255,7 @@ class Interpreter:
                         value = stack_pop()
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
-                    set_namespace_entry(name, 'value', value)
+                    namespace[name] = ('value', value)
                     pc += 1
                     continue
 
@@ -270,7 +269,7 @@ class Interpreter:
                         raise TypeError_(f"def expects a code object, got {code.type_name()}")
                     if use_bytecode and code.bytecode is None:
                         compile_code(code)
-                    set_namespace_entry(name, 'code', code)
+                    namespace[name] = ('code', code)
                     pc += 1
                     continue
 

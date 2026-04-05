@@ -74,7 +74,7 @@ def register_primitives(interp):
         value = vm.pop()
         if not isinstance(name, HString):
             raise TypeError_(f"set expects a string name, got {name.type_name()}")
-        vm.set_namespace_entry(name.value, 'value', value)
+        vm.namespace[name.value] = ('value', value)
 
     def prim_def(vm):
         name = vm.pop()
@@ -85,7 +85,7 @@ def register_primitives(interp):
             raise TypeError_(f"def expects a code object, got {code.type_name()}")
         if vm.use_bytecode and code.bytecode is None:
             vm.compile_code(code)
-        vm.set_namespace_entry(name.value, 'code', code)
+        vm.namespace[name.value] = ('code', code)
 
     # --- Control flow ---
 
