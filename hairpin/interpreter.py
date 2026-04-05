@@ -174,7 +174,7 @@ class Interpreter:
         compile_code = self.compile_code
         set_namespace_entry = self.set_namespace_entry
         use_bytecode = self.use_bytecode
-        repl_get = repl_commands.get
+        repl_get = repl_commands.get if repl_commands else None
         namespace_get = namespace.get
         pc = 0
 
@@ -195,16 +195,18 @@ class Interpreter:
 
                 load_op: NameLoadOp = ops[pc]
                 pc += 1
+                name = load_op.name
 
-                repl_command = repl_get(load_op.name)
-                if repl_command is not None:
-                    repl_command(self)
-                    continue
+                if repl_get is not None:
+                    repl_command = repl_get(name)
+                    if repl_command is not None:
+                        repl_command(self)
+                        continue
 
-                entry = namespace_get(load_op.name)
+                entry = namespace_get(name)
                 if entry is None:
                     raise UndefinedWord(
-                        f"Undefined word '{load_op.name}' at {load_op.line}:{load_op.col}"
+                        f"Undefined word '{name}' at {load_op.line}:{load_op.col}"
                     )
 
                 kind, val = entry

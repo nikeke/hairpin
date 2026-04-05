@@ -277,6 +277,13 @@ class TestNamespace:
         with pytest.raises(UndefinedWord, match="Undefined word 'x'"):
             interp.execute_in_context(code)
 
+    def test_compiled_name_load_record_still_checks_repl_commands(self):
+        interp = run("(foo) 'prog' def")
+        _, code = interp.namespace['prog']
+        interp.repl_commands['foo'] = lambda vm: vm.push(HInt(41))
+        interp.execute_in_context(code)
+        assert stack(interp) == [41]
+
     def test_compiled_arithmetic_and_comparison_opcodes(self):
         interp = run("(1 2 + 3 ==) 'prog' def")
         kind, code = interp.namespace['prog']
