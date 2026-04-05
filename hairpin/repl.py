@@ -73,7 +73,7 @@ def cmd_clear(interp):
 @repl_command("/reset", "Reset the interpreter (stack and namespace)")
 def cmd_reset(interp):
     interp.stack.clear()
-    interp.namespace.clear()
+    interp.clear_namespace()
     print("Interpreter reset.")
 
 

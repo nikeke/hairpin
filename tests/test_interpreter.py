@@ -1,7 +1,7 @@
 """Tests for the Hairpin interpreter and primitives."""
 
 import pytest
-from hairpin.bytecode import OP_ADD, OP_EQ, OP_MUL
+from hairpin.bytecode import NameLoadOp, OP_ADD, OP_EQ, OP_MUL
 from hairpin.interpreter import Interpreter, StackUnderflow, UndefinedWord, TypeError_
 from hairpin.types import HInt, HFloat, HString, HBool, HCode, HairpinError
 
@@ -193,6 +193,33 @@ class TestNamespace:
     def test_compiled_dynamic_name_falls_back(self):
         interp = run("('x' 'name' set 41 name set name get) 'prog' def prog")
         assert stack(interp) == [41]
+
+    def test_compiled_name_load_uses_compact_record(self):
+        interp = run("(x x +) 'prog' def")
+        kind, code = interp.namespace['prog']
+        assert kind == 'code'
+        assert any(isinstance(op, NameLoadOp) for op in code.bytecode.ops)
+
+    def test_compiled_name_load_record_tracks_rebinding(self):
+        interp = run("(x) 'prog' def 1 'x' set prog 2 'x' set prog")
+        assert stack(interp) == [1, 2]
+
+    def test_compiled_name_load_record_rebinds_per_interpreter(self):
+        first = run("(x) 'prog' def 1 'x' set prog")
+        _, code = first.namespace['prog']
+        second = Interpreter()
+        second.set_namespace_entry('prog', 'code', code)
+        second.set_namespace_entry('x', 'value', HInt(2))
+        second.run("prog")
+        assert stack(second) == [2]
+
+    def test_compiled_name_load_record_handles_namespace_clear(self):
+        interp = run("(x) 'prog' def 1 'x' set")
+        _, code = interp.namespace['prog']
+        interp.execute_in_context(code)
+        interp.clear_namespace()
+        with pytest.raises(UndefinedWord, match="Undefined word 'x'"):
+            interp.execute_in_context(code)
 
     def test_compiled_arithmetic_and_comparison_opcodes(self):
         interp = run("(1 2 + 3 ==) 'prog' def")

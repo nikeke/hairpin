@@ -44,11 +44,17 @@ SPECIALIZED_PRIMITIVES = {
     ">=": OP_GE,
 }
 
-
 @dataclass(frozen=True)
 class BytecodeProgram:
     code: HCode
     ops: tuple[object, ...]
+
+
+@dataclass(slots=True)
+class NameLoadOp:
+    name: str
+    line: int
+    col: int
 
 
 def compile_hcode(code: HCode, primitives: dict[str, Callable]) -> BytecodeProgram:
@@ -119,7 +125,7 @@ def compile_hcode(code: HCode, primitives: dict[str, Callable]) -> BytecodeProgr
             continue
 
         ops.append(OP_LOAD_NAME_TAIL if is_last else OP_LOAD_NAME)
-        ops.extend((name, instr.line, instr.col))
+        ops.append(NameLoadOp(name, instr.line, instr.col))
         index += 1
 
     program = BytecodeProgram(code=code, ops=tuple(ops))

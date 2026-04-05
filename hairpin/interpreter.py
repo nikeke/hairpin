@@ -23,6 +23,7 @@ from hairpin.bytecode import (
     OP_TCO_IF,
     OP_TCO_IF_ELSE,
     BytecodeProgram,
+    NameLoadOp,
     compile_hcode,
 )
 from hairpin.parser import parse, PushLiteral, WordRef
@@ -96,6 +97,12 @@ class Interpreter:
     def compile_code(self, code: HCode) -> BytecodeProgram:
         return compile_hcode(code, self._primitives)
 
+    def set_namespace_entry(self, name: str, kind: str, value: object):
+        self.namespace[name] = (kind, value)
+
+    def clear_namespace(self):
+        self.namespace.clear()
+
     def _execute_code(self, code: HCode):
         if self.use_bytecode:
             return self._execute_bytecode(self.compile_code(code))
@@ -148,8 +155,11 @@ class Interpreter:
         stack_pop = stack.pop
         execute_in_context = self.execute_in_context
         compile_code = self.compile_code
+        set_namespace_entry = self.set_namespace_entry
         use_bytecode = self.use_bytecode
         pop = self.pop
+        repl_get = repl_commands.get
+        namespace_get = namespace.get
         tco_exec = self._tco_exec
         if_tco = self._primitives_tco['if']
         if_else_tco = self._primitives_tco['if-else']
@@ -301,7 +311,8 @@ class Interpreter:
                 continue
 
             if op == OP_SET_LITERAL_NAME:
-                namespace[ops[pc]] = ('value', pop())
+                name = ops[pc]
+                set_namespace_entry(name, 'value', pop())
                 pc += 1
                 continue
 
@@ -312,32 +323,32 @@ class Interpreter:
                     raise TypeError_(f"def expects a code object, got {code.type_name()}")
                 if use_bytecode:
                     compile_code(code)
-                namespace[name] = ('code', code)
+                set_namespace_entry(name, 'code', code)
                 pc += 1
                 continue
 
             if op == OP_GET_LITERAL_NAME:
                 name = ops[pc]
-                entry = namespace.get(name)
+                entry = namespace_get(name)
                 if entry is None:
                     raise HairpinError(f"Undefined word '{name}'")
                 append(entry[1])
                 pc += 1
                 continue
 
-            name = ops[pc]
-            line = ops[pc + 1]
-            col = ops[pc + 2]
-            pc += 3
+            load_op: NameLoadOp = ops[pc]
+            pc += 1
 
-            repl_command = repl_commands.get(name)
+            repl_command = repl_get(load_op.name)
             if repl_command is not None:
                 repl_command(self)
                 continue
 
-            entry = namespace.get(name)
+            entry = namespace_get(load_op.name)
             if entry is None:
-                raise UndefinedWord(f"Undefined word '{name}' at {line}:{col}")
+                raise UndefinedWord(
+                    f"Undefined word '{load_op.name}' at {load_op.line}:{load_op.col}"
+                )
 
             kind, val = entry
             if kind == 'value':
@@ -349,7 +360,9 @@ class Interpreter:
                 execute_in_context(val)
                 continue
 
-            raise RuntimeError_(f"Unknown namespace entry kind {kind!r} for '{name}'")
+            raise RuntimeError_(
+                f"Unknown namespace entry kind {kind!r} for '{load_op.name}'"
+            )
 
     def _tco_exec(self) -> _TailCall:
         """Handle exec as a tail call."""
