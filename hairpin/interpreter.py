@@ -418,9 +418,10 @@ class Interpreter:
                         raise StackUnderflow("Stack underflow") from None
                     continue
 
-                if len(stack) < 2:
-                    raise StackUnderflow("Stack underflow")
-                stack[-1], stack[-2] = stack[-2], stack[-1]
+                try:
+                    stack[-1], stack[-2] = stack[-2], stack[-1]
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
                 continue
 
             if op <= OP_TAIL:
