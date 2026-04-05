@@ -5,6 +5,8 @@ from hairpin.bytecode import (
     OP_CALL_PRIMITIVE,
     OP_DIV,
     OP_DEF_LITERAL_NAME,
+    OP_DROP,
+    OP_DUP,
     OP_EQ,
     OP_GE,
     OP_GET_LITERAL_NAME,
@@ -19,6 +21,7 @@ from hairpin.bytecode import (
     OP_PUSH_LITERAL,
     OP_SET_LITERAL_NAME,
     OP_SUB,
+    OP_SWAP,
     OP_TCO_EXEC,
     OP_TCO_IF,
     OP_TCO_IF_ELSE,
@@ -190,6 +193,26 @@ class Interpreter:
 
             if op == OP_TCO_IF_ELSE:
                 return if_else_tco(self)
+
+            if op == OP_DUP:
+                try:
+                    append(stack[-1])
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                continue
+
+            if op == OP_DROP:
+                try:
+                    stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                continue
+
+            if op == OP_SWAP:
+                if len(stack) < 2:
+                    raise StackUnderflow("Stack underflow")
+                stack[-1], stack[-2] = stack[-2], stack[-1]
+                continue
 
             if OP_ADD <= op <= OP_GE:
                 try:

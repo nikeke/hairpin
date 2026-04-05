@@ -29,6 +29,9 @@ OP_LT = 17
 OP_LE = 18
 OP_GT = 19
 OP_GE = 20
+OP_DUP = 21
+OP_DROP = 22
+OP_SWAP = 23
 
 SPECIALIZED_PRIMITIVES = {
     "+": OP_ADD,
@@ -42,6 +45,9 @@ SPECIALIZED_PRIMITIVES = {
     "<=": OP_LE,
     ">": OP_GT,
     ">=": OP_GE,
+    "dup": OP_DUP,
+    "drop": OP_DROP,
+    "swap": OP_SWAP,
 }
 
 @dataclass(frozen=True)
