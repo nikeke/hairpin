@@ -177,15 +177,15 @@ python benchmarks/run_benchmarks.py
 python benchmarks/run_benchmarks.py --markdown
 ```
 
-The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linux after waiting for a low-load window. They reflect the current interpreter, including cached internal bytecode for executed code objects, compact generic name-load records, and specialized arithmetic, stack/list, conditional, and `self`/tail-`exec` bytecode paths.
+The timings below were measured on an AMD Ryzen 5 PRO 5650U machine running Linux after waiting for a low-load window. They reflect the current interpreter, including cached internal bytecode for executed code objects, specialized arithmetic/stack/list/control-flow paths, and tightened tail-call and namespace fast paths in the bytecode engine.
 
 | Benchmark | Description | Median of 5 runs | Individual runs |
 |-----------|-------------|------------------|-----------------|
-| `countdown` | tail-recursive integer/control-flow loop | 4.460s | 4.460s, 4.452s, 4.475s, 4.457s, 4.469s |
-| `fib-mod` | large integer arithmetic with TCO loop | 0.345s | 0.346s, 0.345s, 0.344s, 0.346s, 0.345s |
-| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 4.671s | 4.678s, 4.671s, 4.696s, 4.659s, 4.652s |
-| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 0.606s | 0.606s, 0.606s, 0.606s, 0.611s, 0.606s |
-| `list-reverse` | tail-recursive list construction and repeated reversal | 2.489s | 2.489s, 2.481s, 2.489s, 2.493s, 2.479s |
+| `countdown` | tail-recursive integer/control-flow loop | 3.576s | 3.569s, 3.580s, 3.576s, 3.600s, 3.575s |
+| `fib-mod` | large integer arithmetic with TCO loop | 0.288s | 0.288s, 0.287s, 0.288s, 0.289s, 0.287s |
+| `primes-sieve` | cons-list sieve and modulo-heavy filtering | 3.787s | 3.796s, 3.787s, 3.782s, 3.787s, 3.800s |
+| `string-roundtrip` | repeated `chars`/`string` round-trips on a large string | 0.607s | 0.607s, 0.608s, 0.606s, 0.607s, 0.607s |
+| `list-reverse` | tail-recursive list construction and repeated reversal | 1.990s | 1.987s, 1.990s, 1.985s, 2.010s, 1.997s |
 
 Treat these as comparative baselines rather than fixed targets; they are most useful for measuring changes against the same workload mix on the same machine.
 
