@@ -104,6 +104,9 @@ class Interpreter:
         self._current_code = old_code
 
     def compile_code(self, code: HCode) -> BytecodeProgram:
+        program = code.bytecode
+        if program is not None:
+            return program
         return compile_hcode(code, self._primitives)
 
     def set_namespace_entry(self, name: str, kind: str, value: object):
@@ -114,7 +117,10 @@ class Interpreter:
 
     def _execute_code(self, code: HCode):
         if self.use_bytecode:
-            return self._execute_bytecode(self.compile_code(code))
+            program = code.bytecode
+            if program is None:
+                program = compile_hcode(code, self._primitives)
+            return self._execute_bytecode(program)
         return self._execute_body(code.instructions)
 
     def _execute_body(self, instructions: list):
@@ -268,7 +274,7 @@ class Interpreter:
                         raise StackUnderflow("Stack underflow") from None
                     if not isinstance(code, HCode):
                         raise TypeError_(f"def expects a code object, got {code.type_name()}")
-                    if use_bytecode:
+                    if use_bytecode and code.bytecode is None:
                         compile_code(code)
                     set_namespace_entry(name, 'code', code)
                     pc += 1

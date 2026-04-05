@@ -224,6 +224,16 @@ class TestNamespace:
         assert code.bytecode is not None
         assert stack(interp) == [2]
 
+    def test_execute_in_context_reuses_cached_bytecode(self):
+        interp = run("(1) 'prog' def")
+        kind, code = interp.namespace['prog']
+        assert kind == 'code'
+        interp.compile_code = lambda _code: (_ for _ in ()).throw(
+            AssertionError("compile_code should not be called for cached bytecode")
+        )
+        interp.execute_in_context(code)
+        assert stack(interp) == [1]
+
     def test_compiled_code_preserves_dynamic_rebinding(self):
         interp = run("(x 1 +) 'bump-x' def 5 'x' set bump-x 7 'x' set bump-x")
         assert stack(interp) == [6, 8]
