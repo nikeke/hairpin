@@ -55,14 +55,6 @@ class TypeError_(RuntimeError_):
     pass
 
 
-# Sentinel for tail-call optimization
-class _TailCall:
-    __slots__ = ('code',)
-
-    def __init__(self, code: HCode):
-        self.code = code
-
-
 class Interpreter:
     def __init__(self, use_bytecode: bool = True):
         self.stack: list[HValue] = []
@@ -97,8 +89,8 @@ class Interpreter:
         current = code
         while True:
             result = self._execute_code(current)
-            if isinstance(result, _TailCall):
-                current = result.code
+            if type(result) is HCode:
+                current = result
             else:
                 break
         self._current_code = old_code
@@ -124,19 +116,19 @@ class Interpreter:
         return self._execute_body(code.instructions)
 
     def _execute_body(self, instructions: list):
-        """Execute instructions. Returns _TailCall if tail position is a tail call."""
+        """Execute instructions. Returns the next code object for a tail call."""
         for i, instr in enumerate(instructions):
             is_last = (i == len(instructions) - 1)
             if isinstance(instr, PushLiteral):
                 self.stack.append(instr.value)
             elif isinstance(instr, WordRef):
                 result = self._dispatch_word(instr, is_last)
-                if isinstance(result, _TailCall):
+                if type(result) is HCode:
                     return result
         return None
 
     def _dispatch_word(self, instr: WordRef, is_last: bool):
-        """Dispatch a word. Returns _TailCall for TCO, else None."""
+        """Dispatch a word. Returns the next code object for TCO, else None."""
         if instr.name in self.repl_commands:
             self.repl_commands[instr.name](self)
         elif instr.name in self._primitives:
@@ -151,7 +143,7 @@ class Interpreter:
                 self.stack.append(val)
             elif kind == 'code':
                 if is_last:
-                    return _TailCall(val)
+                    return val
                 self.execute_in_context(val)
         else:
             raise UndefinedWord(
@@ -215,7 +207,7 @@ class Interpreter:
                     continue
                 if kind == 'code':
                     if op == OP_LOAD_NAME_TAIL:
-                        return _TailCall(val)
+                        return val
                     execute_in_context(val)
                     continue
 
@@ -231,7 +223,7 @@ class Interpreter:
                         raise StackUnderflow("Stack underflow") from None
                     if not isinstance(code, HCode):
                         raise TypeError_(f"exec expects a code object, got {code.type_name()}")
-                    return _TailCall(code)
+                    return code
 
                 if op == OP_TCO_IF:
                     try:
@@ -242,7 +234,7 @@ class Interpreter:
                     if not isinstance(code, HCode):
                         raise TypeError_(f"if expects a code object, got {code.type_name()}")
                     if cond.to_bool():
-                        return _TailCall(code)
+                        return code
                     continue
 
                 try:
@@ -255,7 +247,7 @@ class Interpreter:
                     raise TypeError_(f"if-else expects code objects, got {then_code.type_name()}")
                 if not isinstance(else_code, HCode):
                     raise TypeError_(f"if-else expects code objects, got {else_code.type_name()}")
-                return _TailCall(then_code if cond.to_bool() else else_code)
+                return then_code if cond.to_bool() else else_code
 
             if op <= OP_GET_LITERAL_NAME:
                 if op == OP_SET_LITERAL_NAME:
@@ -496,12 +488,12 @@ class Interpreter:
 
             raise RuntimeError_(f"Unknown bytecode opcode {op!r}")
 
-    def _tco_exec(self) -> _TailCall:
+    def _tco_exec(self) -> HCode:
         """Handle exec as a tail call."""
         code = self.pop()
         if not isinstance(code, HCode):
             raise TypeError_(f"exec expects a code object, got {code.type_name()}")
-        return _TailCall(code)
+        return code
 
     def push(self, value: HValue):
         self.stack.append(value)

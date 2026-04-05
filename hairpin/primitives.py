@@ -6,7 +6,7 @@ from hairpin.types import (
     HValue, HInt, HFloat, HString, HBool, HCode, HairpinError,
     HCons, HNil, NIL,
 )
-from hairpin.interpreter import TypeError_, StackUnderflow, _TailCall
+from hairpin.interpreter import TypeError_, StackUnderflow
 
 
 @lru_cache(maxsize=4096)
@@ -110,13 +110,13 @@ def register_primitives(interp):
             vm.execute_in_context(code)
 
     def prim_if_tco(vm):
-        """TCO version: returns _TailCall instead of executing."""
+        """TCO version: returns the next code object instead of executing."""
         code = vm.pop()
         cond = vm.pop()
         if not isinstance(code, HCode):
             raise TypeError_(f"if expects a code object, got {code.type_name()}")
         if cond.to_bool():
-            return _TailCall(code)
+            return code
         return None
 
     def prim_if_else(vm):
@@ -133,7 +133,7 @@ def register_primitives(interp):
             vm.execute_in_context(else_code)
 
     def prim_if_else_tco(vm):
-        """TCO version: returns _TailCall instead of executing."""
+        """TCO version: returns the next code object instead of executing."""
         else_code = vm.pop()
         then_code = vm.pop()
         cond = vm.pop()
@@ -142,9 +142,9 @@ def register_primitives(interp):
         if not isinstance(else_code, HCode):
             raise TypeError_(f"if-else expects code objects, got {else_code.type_name()}")
         if cond.to_bool():
-            return _TailCall(then_code)
+            return then_code
         else:
-            return _TailCall(else_code)
+            return else_code
 
     def prim_not(vm):
         val = vm.pop()
