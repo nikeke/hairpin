@@ -3,6 +3,7 @@
 from hairpin.bytecode import (
     OP_ADD,
     OP_CALL_PRIMITIVE,
+    OP_CONS,
     OP_DIV,
     OP_DEF_LITERAL_NAME,
     OP_DROP,
@@ -11,6 +12,7 @@ from hairpin.bytecode import (
     OP_GE,
     OP_GET_LITERAL_NAME,
     OP_GT,
+    OP_HEAD,
     OP_LE,
     OP_LT,
     OP_LOAD_NAME,
@@ -22,6 +24,7 @@ from hairpin.bytecode import (
     OP_SET_LITERAL_NAME,
     OP_SUB,
     OP_SWAP,
+    OP_TAIL,
     OP_TCO_EXEC,
     OP_TCO_IF,
     OP_TCO_IF_ELSE,
@@ -30,7 +33,7 @@ from hairpin.bytecode import (
     compile_hcode,
 )
 from hairpin.parser import parse, PushLiteral, WordRef
-from hairpin.types import HBool, HCode, HFloat, HInt, HString, HValue, HairpinError
+from hairpin.types import HBool, HCode, HCons, HFloat, HInt, HString, HValue, HairpinError
 
 
 class RuntimeError_(HairpinError):
@@ -156,6 +159,7 @@ class Interpreter:
         repl_commands = self.repl_commands
         append = stack.append
         stack_pop = stack.pop
+        cons_type = HCons
         execute_in_context = self.execute_in_context
         compile_code = self.compile_code
         set_namespace_entry = self.set_namespace_entry
@@ -368,24 +372,53 @@ class Interpreter:
                     append(HBool(a_val >= b_val))
                 continue
 
-            if op == OP_DUP:
-                try:
-                    append(stack[-1])
-                except IndexError:
-                    raise StackUnderflow("Stack underflow") from None
-                continue
+            if op <= OP_SWAP:
+                if op == OP_DUP:
+                    try:
+                        append(stack[-1])
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    continue
 
-            if op == OP_DROP:
-                try:
-                    stack_pop()
-                except IndexError:
-                    raise StackUnderflow("Stack underflow") from None
-                continue
+                if op == OP_DROP:
+                    try:
+                        stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    continue
 
-            if op == OP_SWAP:
                 if len(stack) < 2:
                     raise StackUnderflow("Stack underflow")
                 stack[-1], stack[-2] = stack[-2], stack[-1]
+                continue
+
+            if op == OP_CONS:
+                try:
+                    tail = stack_pop()
+                    head = stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                append(cons_type(head, tail))
+                continue
+
+            if op == OP_HEAD:
+                try:
+                    val = stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                if not isinstance(val, cons_type):
+                    raise TypeError_(f"head expects a cons cell, got {val.type_name()}")
+                append(val.head)
+                continue
+
+            if op == OP_TAIL:
+                try:
+                    val = stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                if not isinstance(val, cons_type):
+                    raise TypeError_(f"tail expects a cons cell, got {val.type_name()}")
+                append(val.tail)
                 continue
 
             raise RuntimeError_(f"Unknown bytecode opcode {op!r}")

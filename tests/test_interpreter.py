@@ -1,7 +1,18 @@
 """Tests for the Hairpin interpreter and primitives."""
 
 import pytest
-from hairpin.bytecode import NameLoadOp, OP_ADD, OP_DROP, OP_DUP, OP_EQ, OP_MUL, OP_SWAP
+from hairpin.bytecode import (
+    NameLoadOp,
+    OP_ADD,
+    OP_CONS,
+    OP_DROP,
+    OP_DUP,
+    OP_EQ,
+    OP_HEAD,
+    OP_MUL,
+    OP_SWAP,
+    OP_TAIL,
+)
 from hairpin.interpreter import Interpreter, StackUnderflow, UndefinedWord, TypeError_
 from hairpin.types import HInt, HFloat, HString, HBool, HCode, HairpinError
 
@@ -60,6 +71,22 @@ class TestStackOps:
     def test_compiled_stack_opcode_underflow(self):
         with pytest.raises(StackUnderflow):
             run("(swap) 'prog' def prog")
+
+    def test_compiled_list_opcodes(self):
+        interp = run("(1 2 nil cons cons tail head) 'prog' def")
+        kind, code = interp.namespace['prog']
+        assert kind == 'code'
+        assert OP_CONS in code.bytecode.ops
+        assert OP_TAIL in code.bytecode.ops
+        assert OP_HEAD in code.bytecode.ops
+
+    def test_compiled_list_opcode_semantics(self):
+        interp = run("(1 2 nil cons cons tail head) 'prog' def prog")
+        assert stack(interp) == [2]
+
+    def test_compiled_list_opcode_type_error(self):
+        with pytest.raises(TypeError_):
+            run("(nil head) 'prog' def prog")
 
 
 class TestArithmetic:
