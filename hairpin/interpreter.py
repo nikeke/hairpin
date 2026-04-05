@@ -172,49 +172,84 @@ class Interpreter:
             op = ops[pc]
             pc += 1
 
-            if op == OP_PUSH_LITERAL:
-                append(ops[pc])
+            if op <= OP_LOAD_NAME_TAIL:
+                if op == OP_PUSH_LITERAL:
+                    append(ops[pc])
+                    pc += 1
+                    continue
+
+                if op == OP_CALL_PRIMITIVE:
+                    ops[pc](self)
+                    pc += 1
+                    continue
+
+                load_op: NameLoadOp = ops[pc]
                 pc += 1
-                continue
 
-            if op == OP_CALL_PRIMITIVE:
-                ops[pc](self)
-                pc += 1
-                continue
+                repl_command = repl_get(load_op.name)
+                if repl_command is not None:
+                    repl_command(self)
+                    continue
 
-            if op == OP_TCO_EXEC:
-                return tco_exec()
+                entry = namespace_get(load_op.name)
+                if entry is None:
+                    raise UndefinedWord(
+                        f"Undefined word '{load_op.name}' at {load_op.line}:{load_op.col}"
+                    )
 
-            if op == OP_TCO_IF:
-                result = if_tco(self)
-                if isinstance(result, _TailCall):
-                    return result
-                continue
+                kind, val = entry
+                if kind == 'value':
+                    append(val)
+                    continue
+                if kind == 'code':
+                    if op == OP_LOAD_NAME_TAIL:
+                        return _TailCall(val)
+                    execute_in_context(val)
+                    continue
 
-            if op == OP_TCO_IF_ELSE:
+                raise RuntimeError_(
+                    f"Unknown namespace entry kind {kind!r} for '{load_op.name}'"
+                )
+
+            if op <= OP_TCO_IF_ELSE:
+                if op == OP_TCO_EXEC:
+                    return tco_exec()
+
+                if op == OP_TCO_IF:
+                    result = if_tco(self)
+                    if isinstance(result, _TailCall):
+                        return result
+                    continue
+
                 return if_else_tco(self)
 
-            if op == OP_DUP:
-                try:
-                    append(stack[-1])
-                except IndexError:
-                    raise StackUnderflow("Stack underflow") from None
+            if op <= OP_GET_LITERAL_NAME:
+                if op == OP_SET_LITERAL_NAME:
+                    name = ops[pc]
+                    set_namespace_entry(name, 'value', pop())
+                    pc += 1
+                    continue
+
+                if op == OP_DEF_LITERAL_NAME:
+                    name = ops[pc]
+                    code = pop()
+                    if not isinstance(code, HCode):
+                        raise TypeError_(f"def expects a code object, got {code.type_name()}")
+                    if use_bytecode:
+                        compile_code(code)
+                    set_namespace_entry(name, 'code', code)
+                    pc += 1
+                    continue
+
+                name = ops[pc]
+                entry = namespace_get(name)
+                if entry is None:
+                    raise HairpinError(f"Undefined word '{name}'")
+                append(entry[1])
+                pc += 1
                 continue
 
-            if op == OP_DROP:
-                try:
-                    stack_pop()
-                except IndexError:
-                    raise StackUnderflow("Stack underflow") from None
-                continue
-
-            if op == OP_SWAP:
-                if len(stack) < 2:
-                    raise StackUnderflow("Stack underflow")
-                stack[-1], stack[-2] = stack[-2], stack[-1]
-                continue
-
-            if OP_ADD <= op <= OP_GE:
+            if op <= OP_GE:
                 try:
                     b = stack_pop()
                     a = stack_pop()
@@ -333,59 +368,27 @@ class Interpreter:
                     append(HBool(a_val >= b_val))
                 continue
 
-            if op == OP_SET_LITERAL_NAME:
-                name = ops[pc]
-                set_namespace_entry(name, 'value', pop())
-                pc += 1
+            if op == OP_DUP:
+                try:
+                    append(stack[-1])
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
                 continue
 
-            if op == OP_DEF_LITERAL_NAME:
-                name = ops[pc]
-                code = pop()
-                if not isinstance(code, HCode):
-                    raise TypeError_(f"def expects a code object, got {code.type_name()}")
-                if use_bytecode:
-                    compile_code(code)
-                set_namespace_entry(name, 'code', code)
-                pc += 1
+            if op == OP_DROP:
+                try:
+                    stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
                 continue
 
-            if op == OP_GET_LITERAL_NAME:
-                name = ops[pc]
-                entry = namespace_get(name)
-                if entry is None:
-                    raise HairpinError(f"Undefined word '{name}'")
-                append(entry[1])
-                pc += 1
+            if op == OP_SWAP:
+                if len(stack) < 2:
+                    raise StackUnderflow("Stack underflow")
+                stack[-1], stack[-2] = stack[-2], stack[-1]
                 continue
 
-            load_op: NameLoadOp = ops[pc]
-            pc += 1
-
-            repl_command = repl_get(load_op.name)
-            if repl_command is not None:
-                repl_command(self)
-                continue
-
-            entry = namespace_get(load_op.name)
-            if entry is None:
-                raise UndefinedWord(
-                    f"Undefined word '{load_op.name}' at {load_op.line}:{load_op.col}"
-                )
-
-            kind, val = entry
-            if kind == 'value':
-                append(val)
-                continue
-            if kind == 'code':
-                if op == OP_LOAD_NAME_TAIL:
-                    return _TailCall(val)
-                execute_in_context(val)
-                continue
-
-            raise RuntimeError_(
-                f"Unknown namespace entry kind {kind!r} for '{load_op.name}'"
-            )
+            raise RuntimeError_(f"Unknown bytecode opcode {op!r}")
 
     def _tco_exec(self) -> _TailCall:
         """Handle exec as a tail call."""
