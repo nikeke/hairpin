@@ -156,6 +156,7 @@ class Interpreter:
     def _execute_bytecode(self, program: BytecodeProgram):
         """Execute compiled bytecode for a code object."""
         ops = program.ops
+        ops_len = len(ops)
         stack = self.stack
         namespace = self.namespace
         primitives = self._primitives
@@ -167,12 +168,11 @@ class Interpreter:
         compile_code = self.compile_code
         set_namespace_entry = self.set_namespace_entry
         use_bytecode = self.use_bytecode
-        pop = self.pop
         repl_get = repl_commands.get
         namespace_get = namespace.get
         pc = 0
 
-        while pc < len(ops):
+        while pc < ops_len:
             op = ops[pc]
             pc += 1
 
@@ -252,13 +252,20 @@ class Interpreter:
             if op <= OP_GET_LITERAL_NAME:
                 if op == OP_SET_LITERAL_NAME:
                     name = ops[pc]
-                    set_namespace_entry(name, 'value', pop())
+                    try:
+                        value = stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    set_namespace_entry(name, 'value', value)
                     pc += 1
                     continue
 
                 if op == OP_DEF_LITERAL_NAME:
                     name = ops[pc]
-                    code = pop()
+                    try:
+                        code = stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
                     if not isinstance(code, HCode):
                         raise TypeError_(f"def expects a code object, got {code.type_name()}")
                     if use_bytecode:
