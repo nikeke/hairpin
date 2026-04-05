@@ -9,6 +9,8 @@ from hairpin.bytecode import (
     OP_DUP,
     OP_EQ,
     OP_HEAD,
+    OP_IF,
+    OP_IF_ELSE,
     OP_MUL,
     OP_SWAP,
     OP_TAIL,
@@ -278,6 +280,21 @@ class TestNamespace:
     def test_compiled_specialized_division_error(self):
         with pytest.raises(HairpinError, match="Division by zero"):
             run("(1 0 /) 'prog' def prog")
+
+    def test_compiled_if_opcodes(self):
+        interp = run("(1 (41) if 0 (1) (2) if-else drop) 'prog' def")
+        kind, code = interp.namespace['prog']
+        assert kind == 'code'
+        assert OP_IF in code.bytecode.ops
+        assert OP_IF_ELSE in code.bytecode.ops
+
+    def test_compiled_if_opcode_semantics(self):
+        interp = run("(1 (41) if 0 (1) (2) if-else drop) 'prog' def prog")
+        assert stack(interp) == [41]
+
+    def test_compiled_if_opcode_type_error(self):
+        with pytest.raises(TypeError_, match="if expects a code object"):
+            run("(1 42 if) 'prog' def prog")
 
 
 class TestControlFlow:

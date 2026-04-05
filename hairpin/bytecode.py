@@ -35,6 +35,8 @@ OP_SWAP = 23
 OP_CONS = 24
 OP_HEAD = 25
 OP_TAIL = 26
+OP_IF = 27
+OP_IF_ELSE = 28
 
 SPECIALIZED_PRIMITIVES = {
     "+": OP_ADD,
@@ -122,6 +124,14 @@ def compile_hcode(code: HCode, primitives: dict[str, Callable]) -> BytecodeProgr
                 ops.append(OP_TCO_IF_ELSE)
                 index += 1
                 continue
+        elif name == "if":
+            ops.append(OP_IF)
+            index += 1
+            continue
+        elif name == "if-else":
+            ops.append(OP_IF_ELSE)
+            index += 1
+            continue
 
         specialized = SPECIALIZED_PRIMITIVES.get(name)
         if specialized is not None:

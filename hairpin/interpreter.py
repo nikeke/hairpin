@@ -13,6 +13,8 @@ from hairpin.bytecode import (
     OP_GET_LITERAL_NAME,
     OP_GT,
     OP_HEAD,
+    OP_IF,
+    OP_IF_ELSE,
     OP_LE,
     OP_LT,
     OP_LOAD_NAME,
@@ -168,8 +170,6 @@ class Interpreter:
         repl_get = repl_commands.get
         namespace_get = namespace.get
         tco_exec = self._tco_exec
-        if_tco = self._primitives_tco['if']
-        if_else_tco = self._primitives_tco['if-else']
         pc = 0
 
         while pc < len(ops):
@@ -220,12 +220,28 @@ class Interpreter:
                     return tco_exec()
 
                 if op == OP_TCO_IF:
-                    result = if_tco(self)
-                    if isinstance(result, _TailCall):
-                        return result
+                    try:
+                        code = stack_pop()
+                        cond = stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    if not isinstance(code, HCode):
+                        raise TypeError_(f"if expects a code object, got {code.type_name()}")
+                    if cond.to_bool():
+                        return _TailCall(code)
                     continue
 
-                return if_else_tco(self)
+                try:
+                    else_code = stack_pop()
+                    then_code = stack_pop()
+                    cond = stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                if not isinstance(then_code, HCode):
+                    raise TypeError_(f"if-else expects code objects, got {then_code.type_name()}")
+                if not isinstance(else_code, HCode):
+                    raise TypeError_(f"if-else expects code objects, got {else_code.type_name()}")
+                return _TailCall(then_code if cond.to_bool() else else_code)
 
             if op <= OP_GET_LITERAL_NAME:
                 if op == OP_SET_LITERAL_NAME:
@@ -392,26 +408,26 @@ class Interpreter:
                 stack[-1], stack[-2] = stack[-2], stack[-1]
                 continue
 
-            if op == OP_CONS:
-                try:
-                    tail = stack_pop()
-                    head = stack_pop()
-                except IndexError:
-                    raise StackUnderflow("Stack underflow") from None
-                append(cons_type(head, tail))
-                continue
+            if op <= OP_TAIL:
+                if op == OP_CONS:
+                    try:
+                        tail = stack_pop()
+                        head = stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    append(cons_type(head, tail))
+                    continue
 
-            if op == OP_HEAD:
-                try:
-                    val = stack_pop()
-                except IndexError:
-                    raise StackUnderflow("Stack underflow") from None
-                if not isinstance(val, cons_type):
-                    raise TypeError_(f"head expects a cons cell, got {val.type_name()}")
-                append(val.head)
-                continue
+                if op == OP_HEAD:
+                    try:
+                        val = stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    if not isinstance(val, cons_type):
+                        raise TypeError_(f"head expects a cons cell, got {val.type_name()}")
+                    append(val.head)
+                    continue
 
-            if op == OP_TAIL:
                 try:
                     val = stack_pop()
                 except IndexError:
@@ -419,6 +435,32 @@ class Interpreter:
                 if not isinstance(val, cons_type):
                     raise TypeError_(f"tail expects a cons cell, got {val.type_name()}")
                 append(val.tail)
+                continue
+
+            if op <= OP_IF_ELSE:
+                if op == OP_IF:
+                    try:
+                        code = stack_pop()
+                        cond = stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    if not isinstance(code, HCode):
+                        raise TypeError_(f"if expects a code object, got {code.type_name()}")
+                    if cond.to_bool():
+                        execute_in_context(code)
+                    continue
+
+                try:
+                    else_code = stack_pop()
+                    then_code = stack_pop()
+                    cond = stack_pop()
+                except IndexError:
+                    raise StackUnderflow("Stack underflow") from None
+                if not isinstance(then_code, HCode):
+                    raise TypeError_(f"if-else expects code objects, got {then_code.type_name()}")
+                if not isinstance(else_code, HCode):
+                    raise TypeError_(f"if-else expects code objects, got {else_code.type_name()}")
+                execute_in_context(then_code if cond.to_bool() else else_code)
                 continue
 
             raise RuntimeError_(f"Unknown bytecode opcode {op!r}")
