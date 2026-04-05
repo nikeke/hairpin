@@ -1,4 +1,4 @@
-"""Integration tests — run the example programs from notes.md."""
+"""Integration tests for the documented example programs."""
 
 import os
 import pytest
@@ -37,8 +37,8 @@ def run_with_io(source: str, input_lines: list[str] | None = None, capsys=None):
     return interp
 
 
-class TestNotesExamples:
-    """Test all examples from notes.md."""
+class TestLanguageExamples:
+    """Test the documented language examples."""
 
     def test_hello_world(self, capsys):
         run_with_io("'hello, world' print")

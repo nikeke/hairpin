@@ -367,7 +367,7 @@ class TestControlFlow:
 
 class TestSelfExec:
     def test_self_exec_loop(self, capsys):
-        """Test a counting loop using self/exec pattern (matches notes.md)."""
+        """Test a counting loop using the self/exec pattern."""
         interp = run("""
             (1 +) 'increment' def
             1 'i' set

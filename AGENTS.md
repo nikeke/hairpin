@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Hairpin is a dynamically-typed RPN (Reverse Polish Notation) stack-based language. The interpreter is a Python 3.13 prototype structured as a multi-module package. The language spec is in `notes.md`.
+Hairpin is a dynamically-typed RPN (Reverse Polish Notation) stack-based language. The interpreter is a Python 3.13 prototype structured as a multi-module package.
 
 ## Commands
 
@@ -37,16 +37,16 @@ The interpreter pipeline is: **source text → tokenizer → parser → interpre
 - `hairpin/parser.py` — Converts token stream into instruction sequences. `(...)` groups become code objects.
 - `hairpin/types.py` — Runtime value types (`HInt`, `HFloat`, `HString`, `HBool`, `HCode`, `HNil`, `HCons`). `HCode` stores the parsed instruction list and can cache compiled bytecode for repeated execution.
 - `hairpin/bytecode.py` — Compiles `HCode` instruction lists into compact opcode streams for the host interpreter’s cached bytecode path, including literal-name peepholes, specialized arithmetic/comparison, stack/list, conditional, and `self` opcodes, plus compact records for generic namespace loads.
-- `hairpin/interpreter.py` — Executes instruction sequences against a data stack and a single namespace dictionary. Uses a trampoline in `execute_in_context` for tail-call optimization and runs cached bytecode for code objects by default, while preserving the tree-walk path as the semantic fallback. `_TailCall` sentinels propagate through `exec`, `if`, and `if-else` in tail position, the bytecode path keeps namespace rebinding dynamic, and common stack/list/control helpers are executed inline in `_execute_bytecode`.
+- `hairpin/interpreter.py` — Executes instruction sequences against a data stack and a single namespace dictionary. Uses a trampoline in `execute_in_context` for tail-call optimization and runs cached bytecode for code objects by default, while preserving the tree-walk path as the semantic fallback. Tail-position `exec`, `if`, and `if-else` return the next `HCode` directly to the trampoline, the bytecode path keeps namespace rebinding dynamic, and common stack/list/control helpers are executed inline in `_execute_bytecode`.
 - `hairpin/primitives.py` — All built-in words (`get`, `set`, `def`, `if`, `+`, `print`, `dup`, `type`, `chars`, `string`, etc.) registered into the interpreter.
 - `hairpin/repl.py` — Interactive REPL with `/`-prefixed commands (`/stack`, `/words`, `/clear`, `/reset`, `/help`, `/builtins`). New commands are added via the `@repl_command` decorator.
 - `hairpin/__main__.py` — CLI entry point dispatching to file execution or REPL.
 - `examples/selfinterp.hp` — Self-interpreter: a Hairpin program that tokenizes, parses, and evaluates Hairpin source code. It uses cons lists for tokens, AST, meta-stack, and environment, plus a tagged representation for target-language code objects so `type`, `self`, and tail-position execution more closely mirror the host interpreter.
-- `tests/test_integration.py` — End-to-end coverage for notes.md examples and self-interpreter parity, including code-object typing, float/input support, parse/runtime error behavior, and deep TCO loops.
+- `tests/test_integration.py` — End-to-end coverage for documented language examples and self-interpreter parity, including code-object typing, float/input support, parse/runtime error behavior, and deep TCO loops.
 
 ## Key Language Semantics
 
-These are non-obvious design decisions — refer to `notes.md` for the full spec:
+These are non-obvious design decisions to keep in mind:
 
 - **Single namespace**: `set` (store value) and `def` (store executable code) share the same namespace. A `def`'d name can be overwritten with `set` and vice versa.
 - **Same-type operators**: Arithmetic and comparison require identical types on both operands. The sole exception is integer-string multiplication, which works in both operand orders.
