@@ -23,6 +23,7 @@ from hairpin.bytecode import (
     OP_MUL,
     OP_NE,
     OP_PUSH_LITERAL,
+    OP_SELF,
     OP_SET_LITERAL_NAME,
     OP_SUB,
     OP_SWAP,
@@ -169,7 +170,6 @@ class Interpreter:
         pop = self.pop
         repl_get = repl_commands.get
         namespace_get = namespace.get
-        tco_exec = self._tco_exec
         pc = 0
 
         while pc < len(ops):
@@ -217,7 +217,13 @@ class Interpreter:
 
             if op <= OP_TCO_IF_ELSE:
                 if op == OP_TCO_EXEC:
-                    return tco_exec()
+                    try:
+                        code = stack_pop()
+                    except IndexError:
+                        raise StackUnderflow("Stack underflow") from None
+                    if not isinstance(code, HCode):
+                        raise TypeError_(f"exec expects a code object, got {code.type_name()}")
+                    return _TailCall(code)
 
                 if op == OP_TCO_IF:
                     try:
@@ -461,6 +467,13 @@ class Interpreter:
                 if not isinstance(else_code, HCode):
                     raise TypeError_(f"if-else expects code objects, got {else_code.type_name()}")
                 execute_in_context(then_code if cond.to_bool() else else_code)
+                continue
+
+            if op == OP_SELF:
+                code = self._current_code
+                if code is None:
+                    raise HairpinError("self used outside of a code object")
+                append(code)
                 continue
 
             raise RuntimeError_(f"Unknown bytecode opcode {op!r}")

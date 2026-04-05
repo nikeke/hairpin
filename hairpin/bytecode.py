@@ -37,6 +37,7 @@ OP_HEAD = 25
 OP_TAIL = 26
 OP_IF = 27
 OP_IF_ELSE = 28
+OP_SELF = 29
 
 SPECIALIZED_PRIMITIVES = {
     "+": OP_ADD,
@@ -56,6 +57,7 @@ SPECIALIZED_PRIMITIVES = {
     "cons": OP_CONS,
     "head": OP_HEAD,
     "tail": OP_TAIL,
+    "self": OP_SELF,
 }
 
 @dataclass(frozen=True)

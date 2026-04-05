@@ -12,6 +12,7 @@ from hairpin.bytecode import (
     OP_IF,
     OP_IF_ELSE,
     OP_MUL,
+    OP_SELF,
     OP_SWAP,
     OP_TAIL,
 )
@@ -295,6 +296,18 @@ class TestNamespace:
     def test_compiled_if_opcode_type_error(self):
         with pytest.raises(TypeError_, match="if expects a code object"):
             run("(1 42 if) 'prog' def prog")
+
+    def test_compiled_self_opcode(self):
+        interp = run("(self) 'prog' def")
+        kind, code = interp.namespace['prog']
+        assert kind == 'code'
+        assert OP_SELF in code.bytecode.ops
+
+    def test_compiled_self_opcode_semantics(self):
+        interp = run("(self) 'prog' def prog")
+        kind, code = interp.namespace['prog']
+        assert kind == 'code'
+        assert interp.stack[0] is code
 
 
 class TestControlFlow:
