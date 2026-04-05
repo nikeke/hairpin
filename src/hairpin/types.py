@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class HairpinError(Exception):
     """Base error for all Hairpin runtime errors."""
+
     pass
 
 
@@ -98,6 +99,7 @@ class HCode(HValue):
 
 class HNil(HValue):
     """The nil value — empty list, falsy."""
+
     _instance = None
 
     def __new__(cls):

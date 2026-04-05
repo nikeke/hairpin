@@ -1,8 +1,9 @@
 """Tests for cons list support."""
 
 import pytest
+
 from hairpin.interpreter import Interpreter, TypeError_
-from hairpin.types import HInt, HCons, HNil, NIL
+from hairpin.types import HCons, HInt, HNil
 
 
 def run(source: str) -> Interpreter:

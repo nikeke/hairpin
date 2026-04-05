@@ -2,11 +2,19 @@
 
 from functools import lru_cache
 
+from hairpin.interpreter import StackUnderflow, TypeError_
 from hairpin.types import (
-    HValue, HInt, HFloat, HString, HBool, HCode, HairpinError,
-    HCons, HNil, NIL,
+    NIL,
+    HairpinError,
+    HBool,
+    HCode,
+    HCons,
+    HFloat,
+    HInt,
+    HNil,
+    HString,
+    HValue,
 )
-from hairpin.interpreter import TypeError_, StackUnderflow
 
 
 @lru_cache(maxsize=4096)
@@ -165,9 +173,7 @@ def register_primitives(interp):
                 vm.push(HString(a.value * b.value))
                 return
         if a_type is not b_type:
-            raise TypeError_(
-                f"Cannot apply '{op}' to {a.type_name()} and {b.type_name()}"
-            )
+            raise TypeError_(f"Cannot apply '{op}' to {a.type_name()} and {b.type_name()}")
         if a_type is HInt:
             a_val = a.value
             b_val = b.value
@@ -215,9 +221,7 @@ def register_primitives(interp):
         elif a_type is HString and op == '+':
             vm.push(HString(a.value + b.value))
             return
-        raise TypeError_(
-            f"Cannot apply '{op}' to {a.type_name()} and {b.type_name()}"
-        )
+        raise TypeError_(f"Cannot apply '{op}' to {a.type_name()} and {b.type_name()}")
 
     # --- Comparison ---
 
@@ -225,9 +229,7 @@ def register_primitives(interp):
         b, a = vm.pop(), vm.pop()
         a_type = type(a)
         if a_type is not type(b):
-            raise TypeError_(
-                f"Cannot compare {a.type_name()} and {b.type_name()}"
-            )
+            raise TypeError_(f"Cannot compare {a.type_name()} and {b.type_name()}")
         a_val = a.value
         b_val = b.value
         if op == '==':
@@ -353,7 +355,7 @@ def register_primitives(interp):
             append(head.value)
             cur = cur.tail
         if not isinstance(cur, HNil):
-            raise TypeError_(f"string expects a proper list, got dotted pair")
+            raise TypeError_("string expects a proper list, got dotted pair")
         vm.push(HString("".join(parts)))
 
     def prim_type(vm):

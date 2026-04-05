@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from hairpin.tokenizer import Token, TokenType, tokenize
-from hairpin.types import HInt, HFloat, HString, HBool, HCode, HairpinError, NIL
+from hairpin.types import NIL, HairpinError, HBool, HCode, HFloat, HInt, HString
 
 
 class ParseError(HairpinError):
@@ -16,12 +16,14 @@ class ParseError(HairpinError):
 @dataclass
 class PushLiteral:
     """Instruction to push a literal value onto the stack."""
+
     value: object
 
 
 @dataclass
 class WordRef:
     """Instruction to look up and execute/fetch a word."""
+
     name: str
     line: int = 0
     col: int = 0

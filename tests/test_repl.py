@@ -1,9 +1,9 @@
 """Tests for REPL commands."""
 
 import pytest
+
 from hairpin.interpreter import Interpreter
 from hairpin.repl import REPL_COMMANDS
-from hairpin.types import HInt, HString, HCode
 
 
 @pytest.fixture
@@ -105,5 +105,6 @@ class TestInlineUsage:
         """Without REPL registration, /commands are undefined words."""
         vm = Interpreter()
         from hairpin.interpreter import UndefinedWord
+
         with pytest.raises(UndefinedWord):
             vm.run("/stack")

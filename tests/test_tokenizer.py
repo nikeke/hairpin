@@ -1,7 +1,8 @@
 """Tests for the Hairpin tokenizer."""
 
 import pytest
-from hairpin.tokenizer import tokenize, TokenType, TokenizerError
+
+from hairpin.tokenizer import TokenizerError, TokenType, tokenize
 
 
 def types(tokens):
@@ -94,8 +95,10 @@ class TestParens:
 
     def test_nested(self):
         assert types(tokenize("(())")) == [
-            TokenType.LPAREN, TokenType.LPAREN,
-            TokenType.RPAREN, TokenType.RPAREN,
+            TokenType.LPAREN,
+            TokenType.LPAREN,
+            TokenType.RPAREN,
+            TokenType.RPAREN,
         ]
 
 
@@ -132,14 +135,24 @@ class TestCombined:
     def test_code_object(self):
         toks = tokenize("(1 + )")
         assert types(toks) == [
-            TokenType.LPAREN, TokenType.INTEGER, TokenType.WORD, TokenType.RPAREN,
+            TokenType.LPAREN,
+            TokenType.INTEGER,
+            TokenType.WORD,
+            TokenType.RPAREN,
         ]
 
     def test_conditional(self):
         toks = tokenize("input integer 0 ==\n    ('zero' print) if")
         assert values(toks) == [
-            "input", "integer", 0, "==",
-            "(", "zero", "print", ")", "if",
+            "input",
+            "integer",
+            0,
+            "==",
+            "(",
+            "zero",
+            "print",
+            ")",
+            "if",
         ]
 
     def test_minus_as_operator(self):
@@ -157,7 +170,9 @@ class TestPositionTracking:
     def test_line_numbers(self):
         toks = tokenize("1\n2\n3")
         assert [(t.line, t.value) for t in toks if t.type != TokenType.EOF] == [
-            (1, 1), (2, 2), (3, 3),
+            (1, 1),
+            (2, 2),
+            (3, 3),
         ]
 
     def test_column_numbers(self):

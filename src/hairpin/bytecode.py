@@ -60,6 +60,7 @@ SPECIALIZED_PRIMITIVES = {
     "self": OP_SELF,
 }
 
+
 @dataclass(frozen=True)
 class BytecodeProgram:
     code: HCode

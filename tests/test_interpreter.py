@@ -1,8 +1,8 @@
 """Tests for the Hairpin interpreter and primitives."""
 
 import pytest
+
 from hairpin.bytecode import (
-    NameLoadOp,
     OP_ADD,
     OP_CONS,
     OP_DROP,
@@ -11,13 +11,13 @@ from hairpin.bytecode import (
     OP_HEAD,
     OP_IF,
     OP_IF_ELSE,
-    OP_MUL,
     OP_SELF,
     OP_SWAP,
     OP_TAIL,
+    NameLoadOp,
 )
-from hairpin.interpreter import Interpreter, StackUnderflow, UndefinedWord, TypeError_
-from hairpin.types import HInt, HFloat, HString, HBool, HCode, HairpinError
+from hairpin.interpreter import Interpreter, StackUnderflow, TypeError_, UndefinedWord
+from hairpin.types import HairpinError, HInt
 
 
 def run(source: str, input_lines: list[str] | None = None) -> Interpreter:
@@ -25,6 +25,7 @@ def run(source: str, input_lines: list[str] | None = None) -> Interpreter:
     interp = Interpreter()
     if input_lines is not None:
         import builtins
+
         orig = builtins.input
         it = iter(input_lines)
         builtins.input = lambda *a: next(it)
@@ -368,7 +369,7 @@ class TestControlFlow:
 class TestSelfExec:
     def test_self_exec_loop(self, capsys):
         """Test a counting loop using the self/exec pattern."""
-        interp = run("""
+        run("""
             (1 +) 'increment' def
             1 'i' set
             (self

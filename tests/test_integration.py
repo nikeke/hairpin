@@ -1,14 +1,12 @@
 """Integration tests for the documented example programs."""
 
 import os
-import pytest
-from hairpin.interpreter import Interpreter
-from hairpin.types import HairpinError, HString
 
+from hairpin.interpreter import Interpreter
+from hairpin.types import HString
 
 # Load self-interpreter definitions (stop before the demo/test block)
-_selfinterp_path = os.path.join(
-    os.path.dirname(__file__), '..', 'examples', 'selfinterp.hp')
+_selfinterp_path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'selfinterp.hp')
 with open(_selfinterp_path) as f:
     _lines = f.read().strip().split('\n')
 # Strip trailing demo lines (everything after 'run-hairpin' def)
@@ -25,6 +23,7 @@ def run_with_io(source: str, input_lines: list[str] | None = None, capsys=None):
     interp = Interpreter()
     if input_lines is not None:
         import builtins
+
         orig = builtins.input
         it = iter(input_lines)
         builtins.input = lambda *a: next(it)
@@ -127,6 +126,7 @@ def _run_in_selfinterp(prog, capsys, input_lines: list[str] | None = None):
     interp.stack.append(HString(prog))
     if input_lines is not None:
         import builtins
+
         orig = builtins.input
         it = iter(input_lines)
         builtins.input = lambda *a: next(it)
@@ -217,7 +217,6 @@ class TestSelfInterpreter:
         """Multiple programs through the same self-interpreter instance."""
         interp = Interpreter()
         interp.run(_SELFINTERP_DEFS)
-        results = []
         for prog in ['1 2 + print', '10 3 * print', '5 5 == print']:
             interp.stack.append(HString(prog))
             interp.run('run-hairpin')
@@ -248,11 +247,7 @@ class TestSelfInterpreter:
         assert _run_in_selfinterp(prog, capsys) == '2'
 
     def test_self_interpreter_tco(self, capsys):
-        prog = (
-            "1 'i' set "
-            "(self i 3000 <= (i 1 + 'i' set exec) if) "
-            "exec i print"
-        )
+        prog = "1 'i' set (self i 3000 <= (i 1 + 'i' set exec) if) exec i print"
         assert _run_in_selfinterp(prog, capsys) == '3001'
 
     def test_float_literals(self, capsys):

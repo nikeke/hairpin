@@ -83,9 +83,7 @@ def _benchmark_source(source: str, bench: Benchmark) -> list[float]:
         output = _run_source(source)
         elapsed = time.perf_counter() - start
         if output != bench.expected_stdout:
-            raise RuntimeError(
-                f"{bench.name}: expected {bench.expected_stdout!r}, got {output!r}"
-            )
+            raise RuntimeError(f"{bench.name}: expected {bench.expected_stdout!r}, got {output!r}")
         runs.append(elapsed)
     return runs
 

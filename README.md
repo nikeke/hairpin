@@ -5,11 +5,14 @@ A minimalistic, dynamically-typed, stack-based language with RPN (Reverse Polish
 ## Quick Start
 
 ```bash
-# Run a program from the repository root
-PYTHONPATH=src python -m hairpin program.hp
+# Install the package in editable mode
+python -m pip install -e .
 
-# Start the REPL from the repository root
-PYTHONPATH=src python -m hairpin
+# Run a program
+python -m hairpin program.hp
+
+# Start the REPL
+python -m hairpin
 ```
 
 Requires Python 3.13+.
@@ -125,7 +128,7 @@ x 0 > ('positive' print) ('non-positive' print) if-else
 Computes Fibonacci numbers up to F(10000) using arbitrary-precision integers:
 
 ```
-PYTHONPATH=src python -m hairpin examples/fib.hp
+python -m hairpin examples/fib.hp
 ```
 
 ### Prime Counting (`examples/primes.hp`)
@@ -133,7 +136,7 @@ PYTHONPATH=src python -m hairpin examples/fib.hp
 Counts primes up to 10,000 with a cons-list Sieve of Eratosthenes:
 
 ```
-PYTHONPATH=src python -m hairpin examples/primes.hp
+python -m hairpin examples/primes.hp
 ```
 
 ### Self-Interpreter (`examples/selfinterp.hp`)
@@ -143,7 +146,7 @@ A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evalu
 Internally it uses cons lists for tokens, AST, the meta-stack, and the environment, with a tagged representation for target-language code objects.
 
 ```
-PYTHONPATH=src python -m hairpin examples/selfinterp.hp    # prints 49, then the first 1000 Fibonacci numbers
+python -m hairpin examples/selfinterp.hp    # prints 49, then the first 1000 Fibonacci numbers
 ```
 
 ## REPL
@@ -162,7 +165,12 @@ The interactive REPL supports readline with tab completion and the following com
 ## Tests
 
 ```bash
+python -m pip install -e '.[dev]'
 pytest
+
+# Lint and formatting checks
+ruff check src/hairpin tests benchmarks
+ruff format --check src/hairpin tests benchmarks
 
 # Focus on the self-interpreter parity coverage
 pytest tests/test_integration.py -k selfinterp

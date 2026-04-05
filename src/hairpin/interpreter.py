@@ -4,8 +4,8 @@ from hairpin.bytecode import (
     OP_ADD,
     OP_CALL_PRIMITIVE,
     OP_CONS,
-    OP_DIV,
     OP_DEF_LITERAL_NAME,
+    OP_DIV,
     OP_DROP,
     OP_DUP,
     OP_EQ,
@@ -16,9 +16,8 @@ from hairpin.bytecode import (
     OP_IF,
     OP_IF_ELSE,
     OP_LE,
-    OP_LT,
-    OP_LOAD_NAME,
     OP_LOAD_NAME_TAIL,
+    OP_LT,
     OP_MOD,
     OP_MUL,
     OP_NE,
@@ -35,8 +34,8 @@ from hairpin.bytecode import (
     NameLoadOp,
     compile_hcode,
 )
-from hairpin.parser import parse, PushLiteral, WordRef
-from hairpin.types import HBool, HCode, HCons, HFloat, HInt, HString, HValue, HairpinError
+from hairpin.parser import PushLiteral, WordRef, parse
+from hairpin.types import HairpinError, HBool, HCode, HCons, HFloat, HInt, HString, HValue
 
 
 class RuntimeError_(HairpinError):
@@ -63,6 +62,7 @@ class Interpreter:
         self.use_bytecode = use_bytecode
         self._current_code: HCode | None = None
         from hairpin.primitives import register_primitives
+
         register_primitives(self)
 
     def run(self, source: str):
@@ -80,7 +80,7 @@ class Interpreter:
 
     def execute_in_context(self, code: HCode):
         """Execute a code object with trampoline for TCO.
-        
+
         _current_code always refers to the original code object passed in,
         so that `self` returns the right code even through TCO trampolining.
         """
@@ -118,7 +118,7 @@ class Interpreter:
     def _execute_body(self, instructions: list):
         """Execute instructions. Returns the next code object for a tail call."""
         for i, instr in enumerate(instructions):
-            is_last = (i == len(instructions) - 1)
+            is_last = i == len(instructions) - 1
             if isinstance(instr, PushLiteral):
                 self.stack.append(instr.value)
             elif isinstance(instr, WordRef):
@@ -146,9 +146,7 @@ class Interpreter:
                     return val
                 self.execute_in_context(val)
         else:
-            raise UndefinedWord(
-                f"Undefined word '{instr.name}' at {instr.line}:{instr.col}"
-            )
+            raise UndefinedWord(f"Undefined word '{instr.name}' at {instr.line}:{instr.col}")
         return None
 
     def _execute_bytecode(self, program: BytecodeProgram):
@@ -210,9 +208,7 @@ class Interpreter:
                     execute_in_context(val)
                     continue
 
-                raise RuntimeError_(
-                    f"Unknown namespace entry kind {kind!r} for '{load_op.name}'"
-                )
+                raise RuntimeError_(f"Unknown namespace entry kind {kind!r} for '{load_op.name}'")
 
             if op <= OP_TCO_IF_ELSE:
                 if op == OP_TCO_EXEC:

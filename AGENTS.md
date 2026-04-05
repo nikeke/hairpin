@@ -10,8 +10,8 @@ Hairpin is a dynamically-typed RPN (Reverse Polish Notation) stack-based languag
 # Activate the venv (always do this first)
 source venv/bin/activate
 
-# Run module commands from the repository checkout
-export PYTHONPATH=src
+# Install the package and dev tooling in editable mode
+python -m pip install -e '.[dev]'
 
 # Run a Hairpin program
 python -m hairpin program.hp
@@ -21,6 +21,10 @@ python -m hairpin
 
 # Run all tests
 pytest
+
+# Run lint and formatting checks
+ruff check src/hairpin tests benchmarks
+ruff format --check src/hairpin tests benchmarks
 
 # Run the self-interpreter parity coverage
 pytest tests/test_integration.py -k selfinterp

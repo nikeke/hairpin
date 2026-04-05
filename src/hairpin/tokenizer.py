@@ -1,7 +1,7 @@
 """Hairpin tokenizer — lexes source text into tokens."""
 
-from enum import Enum, auto
 from dataclasses import dataclass
+from enum import Enum, auto
 
 
 class TokenType(Enum):

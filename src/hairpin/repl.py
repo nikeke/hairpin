@@ -3,7 +3,7 @@
 import readline
 
 from hairpin.interpreter import Interpreter
-from hairpin.types import HairpinError, HInt, HFloat, HString, HBool, HCode, HCons, HNil
+from hairpin.types import HairpinError, HBool, HCode, HCons, HFloat, HInt, HNil, HString
 
 
 def _format_value(val):
@@ -38,9 +38,11 @@ REPL_COMMANDS = {}
 
 def repl_command(name, help_text):
     """Decorator to register a REPL command."""
+
     def decorator(func):
         REPL_COMMANDS[name] = (func, help_text)
         return func
+
     return decorator
 
 

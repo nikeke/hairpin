@@ -1,8 +1,9 @@
 """Tests for the Hairpin parser."""
 
 import pytest
-from hairpin.parser import parse, PushLiteral, WordRef, ParseError
-from hairpin.types import HInt, HFloat, HString, HBool, HCode
+
+from hairpin.parser import ParseError, PushLiteral, WordRef, parse
+from hairpin.types import HBool, HCode, HFloat, HInt, HString
 
 
 class TestLiterals:
