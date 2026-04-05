@@ -292,8 +292,8 @@ class Interpreter:
 
             if op <= OP_GE:
                 try:
-                    b = stack_pop()
-                    a = stack_pop()
+                    a = stack[-2]
+                    b = stack[-1]
                 except IndexError:
                     raise StackUnderflow("Stack underflow") from None
                 a_type = type(a)
@@ -301,46 +301,49 @@ class Interpreter:
 
                 if op == OP_ADD:
                     if a_type is HInt and b_type is HInt:
-                        append(HInt(a.value + b.value))
+                        stack[-2] = HInt(a.value + b.value)
+                        stack_pop()
                         continue
                     if a_type is HFloat and b_type is HFloat:
-                        append(HFloat(a.value + b.value))
+                        stack[-2] = HFloat(a.value + b.value)
+                        stack_pop()
                         continue
                     if a_type is HString and b_type is HString:
-                        append(HString(a.value + b.value))
+                        stack[-2] = HString(a.value + b.value)
+                        stack_pop()
                         continue
-                    append(a)
-                    append(b)
                     primitives['+'](self)
                     continue
 
                 if op == OP_SUB:
                     if a_type is HInt and b_type is HInt:
-                        append(HInt(a.value - b.value))
+                        stack[-2] = HInt(a.value - b.value)
+                        stack_pop()
                         continue
                     if a_type is HFloat and b_type is HFloat:
-                        append(HFloat(a.value - b.value))
+                        stack[-2] = HFloat(a.value - b.value)
+                        stack_pop()
                         continue
-                    append(a)
-                    append(b)
                     primitives['-'](self)
                     continue
 
                 if op == OP_MUL:
                     if a_type is HInt and b_type is HInt:
-                        append(HInt(a.value * b.value))
+                        stack[-2] = HInt(a.value * b.value)
+                        stack_pop()
                         continue
                     if a_type is HFloat and b_type is HFloat:
-                        append(HFloat(a.value * b.value))
+                        stack[-2] = HFloat(a.value * b.value)
+                        stack_pop()
                         continue
                     if a_type is HInt and b_type is HString:
-                        append(HString(b.value * a.value))
+                        stack[-2] = HString(b.value * a.value)
+                        stack_pop()
                         continue
                     if a_type is HString and b_type is HInt:
-                        append(HString(a.value * b.value))
+                        stack[-2] = HString(a.value * b.value)
+                        stack_pop()
                         continue
-                    append(a)
-                    append(b)
                     primitives['*'](self)
                     continue
 
@@ -348,15 +351,15 @@ class Interpreter:
                     if a_type is HInt and b_type is HInt:
                         if b.value == 0:
                             raise HairpinError("Division by zero")
-                        append(HInt(a.value // b.value))
+                        stack[-2] = HInt(a.value // b.value)
+                        stack_pop()
                         continue
                     if a_type is HFloat and b_type is HFloat:
                         if b.value == 0.0:
                             raise HairpinError("Division by zero")
-                        append(HFloat(a.value / b.value))
+                        stack[-2] = HFloat(a.value / b.value)
+                        stack_pop()
                         continue
-                    append(a)
-                    append(b)
                     primitives['/'](self)
                     continue
 
@@ -364,21 +367,19 @@ class Interpreter:
                     if a_type is HInt and b_type is HInt:
                         if b.value == 0:
                             raise HairpinError("Modulo by zero")
-                        append(HInt(a.value % b.value))
+                        stack[-2] = HInt(a.value % b.value)
+                        stack_pop()
                         continue
                     if a_type is HFloat and b_type is HFloat:
                         if b.value == 0.0:
                             raise HairpinError("Modulo by zero")
-                        append(HFloat(a.value % b.value))
+                        stack[-2] = HFloat(a.value % b.value)
+                        stack_pop()
                         continue
-                    append(a)
-                    append(b)
                     primitives['%'](self)
                     continue
 
                 if a_type is not b_type or a_type not in (HInt, HFloat, HString, HBool):
-                    append(a)
-                    append(b)
                     if op == OP_EQ:
                         primitives['=='](self)
                     elif op == OP_NE:
@@ -396,17 +397,18 @@ class Interpreter:
                 a_val = a.value
                 b_val = b.value
                 if op == OP_EQ:
-                    append(HBool(a_val == b_val))
+                    stack[-2] = HBool(a_val == b_val)
                 elif op == OP_NE:
-                    append(HBool(a_val != b_val))
+                    stack[-2] = HBool(a_val != b_val)
                 elif op == OP_LT:
-                    append(HBool(a_val < b_val))
+                    stack[-2] = HBool(a_val < b_val)
                 elif op == OP_LE:
-                    append(HBool(a_val <= b_val))
+                    stack[-2] = HBool(a_val <= b_val)
                 elif op == OP_GT:
-                    append(HBool(a_val > b_val))
+                    stack[-2] = HBool(a_val > b_val)
                 else:
-                    append(HBool(a_val >= b_val))
+                    stack[-2] = HBool(a_val >= b_val)
+                stack_pop()
                 continue
 
             if op <= OP_SWAP:
@@ -432,30 +434,31 @@ class Interpreter:
             if op <= OP_TAIL:
                 if op == OP_CONS:
                     try:
-                        tail = stack_pop()
-                        head = stack_pop()
+                        head = stack[-2]
+                        tail = stack[-1]
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
-                    append(cons_type(head, tail))
+                    stack[-2] = cons_type(head, tail)
+                    stack_pop()
                     continue
 
                 if op == OP_HEAD:
                     try:
-                        val = stack_pop()
+                        val = stack[-1]
                     except IndexError:
                         raise StackUnderflow("Stack underflow") from None
                     if not isinstance(val, cons_type):
                         raise TypeError_(f"head expects a cons cell, got {val.type_name()}")
-                    append(val.head)
+                    stack[-1] = val.head
                     continue
 
                 try:
-                    val = stack_pop()
+                    val = stack[-1]
                 except IndexError:
                     raise StackUnderflow("Stack underflow") from None
                 if not isinstance(val, cons_type):
                     raise TypeError_(f"tail expects a cons cell, got {val.type_name()}")
-                append(val.tail)
+                stack[-1] = val.tail
                 continue
 
             if op <= OP_IF_ELSE:

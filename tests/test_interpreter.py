@@ -295,6 +295,10 @@ class TestNamespace:
         interp = run("(3 'ab' * 'ababab' ==) 'prog' def prog")
         assert stack(interp) == [True]
 
+    def test_compiled_specialized_comparison_falls_back_without_stack_corruption(self):
+        with pytest.raises(TypeError_, match="Cannot compare integer and boolean"):
+            run("(1 true ==) 'prog' def prog")
+
     def test_compiled_specialized_division_error(self):
         with pytest.raises(HairpinError, match="Division by zero"):
             run("(1 0 /) 'prog' def prog")
