@@ -55,11 +55,14 @@ class TypeError_(RuntimeError_):
 
 
 class Interpreter:
-    def __init__(self, use_bytecode: bool = True):
+    def __init__(
+        self, use_bytecode: bool = True, program_args: list[str] | tuple[str, ...] | None = None
+    ):
         self.stack: list[HValue] = []
         self.namespace: dict[str, tuple[str, object]] = {}
         self.repl_commands: dict[str, callable] = {}
         self.use_bytecode = use_bytecode
+        self.program_args: tuple[str, ...] = tuple(program_args or ())
         self._current_code: HCode | None = None
         from hairpin.primitives import register_primitives
 

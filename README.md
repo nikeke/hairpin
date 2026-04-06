@@ -9,7 +9,7 @@ A minimalistic, dynamically-typed, stack-based language with RPN (Reverse Polish
 python -m pip install -e .
 
 # Run a program
-python -m hairpin program.hp
+python -m hairpin program.hp [arg ...]
 
 # Start the REPL
 python -m hairpin
@@ -116,6 +116,8 @@ x 0 > ('positive' print) ('non-positive' print) if-else
 | `type` | `VAL -- STRING` | Type name as string |
 | `print` | `VAL --` | Print a value |
 | `input` | `-- STRING` | Read a line from stdin |
+| `program-args` | `-- LIST` | Current program arguments as a list of strings |
+| `read-file` | `PATH -- STRING` | Read a UTF-8 text file into a string |
 | `cons` | `H T -- CONS` | Create a cons cell |
 | `head` `tail` | `CONS -- VAL` | Decompose a cons cell |
 | `chars` | `STRING -- LIST` | String to list of characters |
@@ -141,12 +143,14 @@ python -m hairpin examples/primes.hp
 
 ### Self-Interpreter (`examples/selfinterp.hp`)
 
-A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evaluator in a single self-contained source file. It supports typed code objects, preserves the original current code object for `self`, performs tail-call-aware `exec`/`if`/`if-else`, supports float literals plus `float`/`input`, and halts on parse or undefined-word errors with a message.
+A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evaluator in a single self-contained source file. It supports typed code objects, preserves the original current code object for `self`, performs tail-call-aware `exec`/`if`/`if-else`, supports float literals plus `float`/`input`, can access `program-args` and `read-file`, and halts on parse or undefined-word errors with a message.
 
 Internally it uses cons lists for tokens, AST, the meta-stack, and the environment, with a tagged representation for target-language code objects.
 
+Use it as a file runner for another Hairpin program. The first argument is the child program path; any remaining arguments are forwarded to that interpreted program.
+
 ```
-python -m hairpin examples/selfinterp.hp    # prints 49, then the first 1000 Fibonacci numbers
+python -m hairpin examples/selfinterp.hp examples/fib.hp
 ```
 
 ## REPL

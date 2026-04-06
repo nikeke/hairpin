@@ -41,6 +41,7 @@ nil '__error' set
 nil '__tailcall' set
 nil 'current-code' set
 nil 'current-code-stack' set
+nil 'program-args-list' set
 
 (nil '__error' set) 'clear-error' def
 ('msg' set msg '__error' set) 'fail' def
@@ -366,50 +367,56 @@ nil 'pacc' set
                                              (meta-pop string meta-push)
                                              (wname 'type' ==
                                                (meta-pop target-type meta-push)
-                                               (wname 'print' ==
-                                                 (meta-pop print)
-                                                 (wname 'input' ==
-                                                   (input meta-push)
-                                                   (wname 'set' ==
-                                                     (meta-pop 'sn' set meta-pop 'sv' set
-                                                      sn 'value' sv env-set)
-                                                     (wname 'get' ==
-                                                       (meta-pop 'gn' set
-                                                        gn env env-lookup 'lu' set
-                                                        lu
-                                                          (lu tail meta-push)
-                                                          ('Undefined word \'' gn + '\'' + fail) if-else)
-                                                       (wname 'def' ==
-                                                         (meta-pop 'dn' set meta-pop 'dv' set
-                                                          dn 'code' dv env-set)
-                                                         (wname 'exec' ==
-                                                           (meta-pop eval-code)
-                                                           (wname 'if' ==
-                                                             (meta-pop 'ic' set meta-pop target-bool
-                                                              (ic eval-code) () if-else)
-                                                             (wname 'if-else' ==
-                                                               (meta-pop 'iec' set meta-pop 'iet' set meta-pop target-bool
-                                                                (iet eval-code) (iec eval-code) if-else)
-                                                               (wname 'self' ==
-                                                                 (current-code
-                                                                   (current-code meta-push)
-                                                                   ('self used outside of a code object' fail) if-else)
-                                                                 (wname env env-lookup 'lu' set
-                                                                  lu
-                                                                    (lu head 'value' ==
-                                                                      (lu tail meta-push)
-                                                                      (lu tail eval-code) if-else)
-                                                                    ('Undefined word \'' wname + '\'' + fail) if-else
-                                                                 ) if-else
-                                                               ) if-else
-                                                             ) if-else
-                                                           ) if-else
-                                                         ) if-else
-                                                       ) if-else
-                                                     ) if-else
-                                                   ) if-else
-                                                 ) if-else
-                                               ) if-else
+                                                (wname 'print' ==
+                                                  (meta-pop print)
+                                                  (wname 'input' ==
+                                                    (input meta-push)
+                                                    (wname 'program-args' ==
+                                                      (program-args-list meta-push)
+                                                      (wname 'read-file' ==
+                                                        (meta-pop read-file meta-push)
+                                                        (wname 'set' ==
+                                                          (meta-pop 'sn' set meta-pop 'sv' set
+                                                           sn 'value' sv env-set)
+                                                          (wname 'get' ==
+                                                            (meta-pop 'gn' set
+                                                             gn env env-lookup 'lu' set
+                                                             lu
+                                                               (lu tail meta-push)
+                                                               ('Undefined word \'' gn + '\'' + fail) if-else)
+                                                            (wname 'def' ==
+                                                              (meta-pop 'dn' set meta-pop 'dv' set
+                                                               dn 'code' dv env-set)
+                                                              (wname 'exec' ==
+                                                                (meta-pop eval-code)
+                                                                (wname 'if' ==
+                                                                  (meta-pop 'ic' set meta-pop target-bool
+                                                                   (ic eval-code) () if-else)
+                                                                  (wname 'if-else' ==
+                                                                    (meta-pop 'iec' set meta-pop 'iet' set meta-pop target-bool
+                                                                     (iet eval-code) (iec eval-code) if-else)
+                                                                    (wname 'self' ==
+                                                                      (current-code
+                                                                        (current-code meta-push)
+                                                                        ('self used outside of a code object' fail) if-else)
+                                                                      (wname env env-lookup 'lu' set
+                                                                       lu
+                                                                         (lu head 'value' ==
+                                                                           (lu tail meta-push)
+                                                                           (lu tail eval-code) if-else)
+                                                                         ('Undefined word \'' wname + '\'' + fail) if-else
+                                                                      ) if-else
+                                                                    ) if-else
+                                                                  ) if-else
+                                                                ) if-else
+                                                              ) if-else
+                                                            ) if-else
+                                                          ) if-else
+                                                        ) if-else
+                                                      ) if-else
+                                                    ) if-else
+                                                  ) if-else
+                                                ) if-else
                                              ) if-else
                                            ) if-else
                                          ) if-else
@@ -480,13 +487,14 @@ nil 'pacc' set
 
 # eval-code-body: program --
 (dup
-   (dup head 'ci' set tail 'rest' set
-    rest
+   (dup head 'ci' set tail
+    dup
       (ci eval-instr
        has-error
-         ()
-         (rest eval-code-body) if-else)
-      (ci eval-instr-tail
+         (drop)
+         (eval-code-body) if-else)
+      (drop
+       ci eval-instr-tail
        has-error
          ()
          (__tailcall
@@ -505,24 +513,32 @@ nil 'pacc' set
  current-code-stack tail 'current-code-stack' set
 ) 'eval-code' def
 
-# run-hairpin: source-string --
-(parse 'prog' set
- nil 'stk' set
- nil 'env' set
- nil 'current-code' set
- nil 'current-code-stack' set
- nil '__tailcall' set
+# run-hairpin-with-args: source-string args-list --
+('rh-args' set 'rh-source' set
+ rh-args 'program-args-list' set
+ rh-source parse 'prog' set
+  nil 'stk' set
+  nil 'env' set
+  nil 'current-code' set
+  nil 'current-code-stack' set
+  nil '__tailcall' set
  has-error
    (__error print)
-   (prog eval-top
-    has-error
-      (__error print)
-      () if-else) if-else
-) 'run-hairpin' def
+    (prog eval-top
+     has-error
+       (__error print)
+       () if-else) if-else
+) 'run-hairpin-with-args' def
 
-# ---- Test: square ----
-'(dup *) \'square\' def 7 square print' run-hairpin
+# run-hairpin: source-string --
+(nil run-hairpin-with-args) 'run-hairpin' def
 
-# ---- Test: Fibonacci (first 1000) ----
-'\n' print
-'0 \'a\' set 1 \'b\' set 1 \'i\' set (self i 1000 <= (a print \'\\n\' print b \'temp\' set a b + \'b\' set temp \'a\' set i 1 + \'i\' set exec) if) exec drop' run-hairpin
+# run-file: path args --
+('rf-args' set 'rf-path' set
+ rf-path read-file rf-args run-hairpin-with-args
+) 'run-file' def
+
+# Execute a child Hairpin file when invoked with arguments.
+program-args dup
+  (dup head swap tail run-file)
+  (drop) if-else

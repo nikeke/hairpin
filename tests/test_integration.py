@@ -3,19 +3,20 @@
 import os
 
 from hairpin.interpreter import Interpreter
-from hairpin.types import HString
+from hairpin.types import NIL, HCons, HString
 
-# Load self-interpreter definitions (stop before the demo/test block)
+# Load the self-interpreter source.
 _selfinterp_path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'selfinterp.hp')
-with open(_selfinterp_path) as f:
-    _lines = f.read().strip().split('\n')
-# Strip trailing demo lines (everything after 'run-hairpin' def)
-_cut = len(_lines)
-for _i, _line in enumerate(_lines):
-    if _line.strip().startswith('# ---- Test'):
-        _cut = _i
-        break
-_SELFINTERP_DEFS = '\n'.join(_lines[:_cut])
+with open(_selfinterp_path, encoding="utf-8") as f:
+    _SELFINTERP_SOURCE = f.read()
+_fib_example_path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'fib.hp')
+
+
+def _string_list(values: list[str]):
+    result = NIL
+    for value in reversed(values):
+        result = HCons(HString(value), result)
+    return result
 
 
 def run_with_io(source: str, input_lines: list[str] | None = None, capsys=None):
@@ -119,11 +120,20 @@ class TestTCO:
         assert val.value == 10001
 
 
-def _run_in_selfinterp(prog, capsys, input_lines: list[str] | None = None):
+def _run_in_selfinterp(
+    prog,
+    capsys,
+    input_lines: list[str] | None = None,
+    program_args: list[str] | None = None,
+):
     """Run a Hairpin program through the self-interpreter."""
     interp = Interpreter()
-    interp.run(_SELFINTERP_DEFS)
+    interp.run(_SELFINTERP_SOURCE)
     interp.stack.append(HString(prog))
+    command = 'run-hairpin'
+    if program_args is not None:
+        interp.stack.append(_string_list(program_args))
+        command = 'run-hairpin-with-args'
     if input_lines is not None:
         import builtins
 
@@ -131,11 +141,34 @@ def _run_in_selfinterp(prog, capsys, input_lines: list[str] | None = None):
         it = iter(input_lines)
         builtins.input = lambda *a: next(it)
         try:
-            interp.run('run-hairpin')
+            interp.run(command)
         finally:
             builtins.input = orig
     else:
-        interp.run('run-hairpin')
+        interp.run(command)
+    return capsys.readouterr().out
+
+
+def _run_selfinterp_entrypoint(
+    program_path: str,
+    capsys,
+    program_args: list[str] | None = None,
+    input_lines: list[str] | None = None,
+):
+    """Run examples/selfinterp.hp as a host program that loads another Hairpin file."""
+    interp = Interpreter(program_args=[program_path, *(program_args or [])])
+    if input_lines is not None:
+        import builtins
+
+        orig = builtins.input
+        it = iter(input_lines)
+        builtins.input = lambda *a: next(it)
+        try:
+            interp.run(_SELFINTERP_SOURCE)
+        finally:
+            builtins.input = orig
+    else:
+        interp.run(_SELFINTERP_SOURCE)
     return capsys.readouterr().out
 
 
@@ -216,7 +249,7 @@ class TestSelfInterpreter:
     def test_sequential_runs(self, capsys):
         """Multiple programs through the same self-interpreter instance."""
         interp = Interpreter()
-        interp.run(_SELFINTERP_DEFS)
+        interp.run(_SELFINTERP_SOURCE)
         for prog in ['1 2 + print', '10 3 * print', '5 5 == print']:
             interp.stack.append(HString(prog))
             interp.run('run-hairpin')
@@ -260,6 +293,64 @@ class TestSelfInterpreter:
 
     def test_input_primitive(self, capsys):
         assert _run_in_selfinterp('input print', capsys, input_lines=['hello']) == 'hello'
+
+    def test_program_args_primitive(self, capsys):
+        assert (
+            _run_in_selfinterp(
+                'program-args print',
+                capsys,
+                program_args=['alpha', 'beta'],
+            )
+            == '(alpha beta)'
+        )
+
+    def test_read_file_primitive(self, capsys, tmp_path):
+        data_path = tmp_path / 'data.txt'
+        data_path.write_text('hello from file', encoding='utf-8')
+        assert (
+            _run_in_selfinterp(
+                'program-args head read-file print',
+                capsys,
+                program_args=[str(data_path)],
+            )
+            == 'hello from file'
+        )
+
+    def test_non_tail_if_continues_execution(self, capsys):
+        prog = (
+            "0 'i' set "
+            "(self i 3 <= "
+            "  (i 2 == ('T' print) if "
+            "   i print "
+            "   i 1 + 'i' set "
+            "   exec) if) "
+            "exec drop "
+            "'|' print i print"
+        )
+        assert _run_in_selfinterp(prog, capsys) == '01T23|4'
+
+    def test_source_load_is_quiet_without_program_args(self, capsys):
+        interp = Interpreter()
+        interp.run(_SELFINTERP_SOURCE)
+        assert capsys.readouterr().out == ''
+
+    def test_file_runner_forwards_program_args(self, capsys, tmp_path):
+        child_path = tmp_path / 'child.hp'
+        child_path.write_text('program-args print', encoding='utf-8')
+        assert (
+            _run_selfinterp_entrypoint(
+                str(child_path),
+                capsys,
+                program_args=['alpha', 'beta'],
+            )
+            == '(alpha beta)'
+        )
+
+    def test_file_runner_executes_fib_example(self, capsys):
+        out = _run_selfinterp_entrypoint(_fib_example_path, capsys)
+        assert out.count('\n') == 10
+        assert 'F(1000) =' in out
+        assert 'F(10000) =' in out
 
     def test_parse_error_unmatched_rparen(self, capsys):
         out = _run_in_selfinterp(')', capsys)

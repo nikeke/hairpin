@@ -3,6 +3,7 @@
 from functools import lru_cache
 
 from hairpin.interpreter import StackUnderflow, TypeError_
+from hairpin.runtime_io import read_text_file
 from hairpin.types import (
     NIL,
     HairpinError,
@@ -40,6 +41,15 @@ def _chars_list(value: str) -> HValue:
     if len(value) <= 32768:
         return _cached_chars_list(value)
     return _build_chars_list(value)
+
+
+@lru_cache(maxsize=128)
+def _cached_string_list(values: tuple[str, ...]) -> HValue:
+    result: HValue = NIL
+    cons = HCons
+    for value in reversed(values):
+        result = cons(HString(value), result)
+    return result
 
 
 def register_primitives(interp):
@@ -318,6 +328,15 @@ def register_primitives(interp):
     def prim_input(vm):
         vm.push(HString(input()))
 
+    def prim_program_args(vm):
+        vm.push(_cached_string_list(vm.program_args))
+
+    def prim_read_file(vm):
+        path = vm.pop()
+        if not isinstance(path, HString):
+            raise TypeError_(f"read-file expects a string, got {path.type_name()}")
+        vm.push(HString(read_text_file(path.value)))
+
     # --- List operations ---
 
     def prim_cons(vm):
@@ -379,6 +398,8 @@ def register_primitives(interp):
     interp.register_primitive('not', prim_not)
     interp.register_primitive('print', prim_print)
     interp.register_primitive('input', prim_input)
+    interp.register_primitive('program-args', prim_program_args)
+    interp.register_primitive('read-file', prim_read_file)
     interp.register_primitive('integer', prim_integer)
     interp.register_primitive('float', prim_float)
     interp.register_primitive('cons', prim_cons)

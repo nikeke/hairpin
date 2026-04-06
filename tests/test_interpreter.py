@@ -17,7 +17,7 @@ from hairpin.bytecode import (
     NameLoadOp,
 )
 from hairpin.interpreter import Interpreter, StackUnderflow, TypeError_, UndefinedWord
-from hairpin.types import HairpinError, HInt
+from hairpin.types import HairpinError, HInt, HString
 
 
 def run(source: str, input_lines: list[str] | None = None) -> Interpreter:
@@ -410,6 +410,30 @@ class TestIO:
     def test_input(self):
         interp = run("input", input_lines=["hello"])
         assert stack(interp) == ["hello"]
+
+    def test_program_args(self, capsys):
+        interp = Interpreter(program_args=["alpha", "beta"])
+        interp.run("program-args print")
+        assert capsys.readouterr().out == "(alpha beta)"
+
+    def test_program_args_empty(self, capsys):
+        interp = Interpreter()
+        interp.run("program-args print")
+        assert capsys.readouterr().out == "nil"
+
+    def test_read_file(self, tmp_path):
+        path = tmp_path / "data.txt"
+        path.write_text("hello", encoding="utf-8")
+        interp = Interpreter()
+        interp.stack.append(HString(str(path)))
+        interp.run("read-file")
+        assert stack(interp) == ["hello"]
+
+    def test_read_file_missing(self, tmp_path):
+        interp = Interpreter()
+        interp.stack.append(HString(str(tmp_path / "missing.txt")))
+        with pytest.raises(HairpinError, match="Cannot read file"):
+            interp.run("read-file")
 
 
 class TestBooleanCoercion:
