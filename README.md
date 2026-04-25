@@ -1,6 +1,6 @@
 # Hairpin
 
-A minimalistic, dynamically-typed, stack-based language with RPN (Reverse Polish Notation) syntax.
+A dynamically-typed, stack-based toy programming language with RPN (Reverse Polish Notation) syntax.
 
 ## Quick Start
 
@@ -16,6 +16,8 @@ python -m hairpin
 ```
 
 Requires Python 3.13+.
+
+Hairpin is meant for experimentation and learning rather than production use.
 
 ## Language Overview
 
@@ -143,7 +145,7 @@ python -m hairpin examples/primes.hp
 
 ### Self-Interpreter (`examples/selfinterp.hp`)
 
-A Hairpin interpreter written in Hairpin itself — tokenizer, parser, and evaluator in a single self-contained source file. It supports typed code objects, preserves the original current code object for `self`, performs tail-call-aware `exec`/`if`/`if-else`, supports float literals plus `float`/`input`, can access `program-args` and `read-file`, and halts on parse or undefined-word errors with a message.
+A Hairpin interpreter written in Hairpin itself as a self-interpreter demo — tokenizer, parser, and evaluator in a single self-contained source file. It supports typed code objects, preserves the original current code object for `self`, performs tail-call-aware `exec`/`if`/`if-else`, supports float literals plus `float`/`input`, can access `program-args` and `read-file`, and halts on parse or undefined-word errors with a message.
 
 Internally it uses cons lists for tokens, AST, the meta-stack, and the environment, with a tagged representation for target-language code objects.
 
@@ -182,7 +184,7 @@ pytest tests/test_integration.py -k selfinterp
 
 ## Benchmarks
 
-`benchmarks/run_benchmarks.py` runs a baseline suite aimed at the interpreter hot paths that matter for future performance work. It performs 1 warmup run and 5 timed runs per program, and it verifies each benchmark's stdout before reporting timings.
+`benchmarks/run_benchmarks.py` runs a baseline suite aimed at interpreter hot paths that are useful when tinkering with the implementation. It performs 1 warmup run and 5 timed runs per program, and it verifies each benchmark's stdout before reporting timings.
 
 ```bash
 python benchmarks/run_benchmarks.py

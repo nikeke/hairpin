@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-Hairpin is a dynamically-typed RPN (Reverse Polish Notation) stack-based language. The interpreter is a Python 3.13 prototype structured as a multi-module package.
+Hairpin is a dynamically-typed, stack-based toy programming language with RPN (Reverse Polish Notation) syntax. The interpreter is a Python 3.13 prototype structured as a multi-module package.
+
+Keep public-facing descriptions grounded in that scope: Hairpin is for experimentation and learning, not production use.
 
 ## Commands
 
